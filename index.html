@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dexterity</title>
+    <title>ASL Translator</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -197,7 +197,6 @@
             cursor:pointer;display:flex;align-items:center;justify-content:center;
             transition:all .15s;
         }
-
         .dexter-close:hover{background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.4);color:var(--accent2);}
 
         .dexter-body{padding:20px;}
@@ -291,7 +290,9 @@
 <body>
 <div class="app">
     <header>
-        <h1><img src="src/images/dexterity_logo_transparent.png" width="45" alt="dexterity-logo"><img src="src/images/dexterity_logo_text_png.png" alt="dexterity-logo-text" height="40"></h1>
+        <h1>ASL <span>Translator</span></h1>
+        <span class="subtitle">// MediaPipe hands · pure KNN · trained on your data</span>
+        <span class="badge badge-loading" id="modelBadge">⟳ initializing…</span>
     </header>
 
     <div class="layout">
@@ -423,7 +424,7 @@
     <div class="dexter-dialog" id="dexterDialog">
         <div class="dexter-header">
             <div class="dexter-avatar">
-                <div class="dexter-avatar-face"><img src="src/images/dexter_png.png" alt="dexter" width="34" height="auto"></div>
+                <div class="dexter-avatar-face">🤖</div>
                 <div class="dexter-avatar-pulse"></div>
             </div>
             <div class="dexter-header-text">
@@ -431,6 +432,7 @@
                 <div class="dexter-tagline">// your ASL hand-shape guide</div>
             </div>
             <div class="dexter-sign-badge let" id="dexterBadge">A</div>
+            <button class="dexter-close" onclick="closeDexter()">✕</button>
         </div>
         <div class="dexter-body" id="dexterBody">
             <!-- filled by JS -->
