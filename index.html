@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hand Tracking</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: sans-serif; background: #111; color: #eee; padding: 1.5rem; }
+        h1 { font-size: 20px; font-weight: 500; margin-bottom: 1rem; }
+        .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+        button {
+            padding: 8px 20px; border-radius: 8px; border: 1px solid #444;
+            background: #222; color: #eee; cursor: pointer; font-size: 14px;
+        }
+        button:hover { background: #333; }
+        #statusMsg { font-size: 13px; color: #aaa; }
+        .video-wrapper { position: relative; display: inline-block; width: 100%; max-width: 640px; }
+        video {
+            width: 100%; border-radius: 10px; border: 1px solid #333;
+            display: block; transform: scaleX(-1);
+        }
+        canvas {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            border-radius: 10px; transform: scaleX(-1);
+        }
+        .stats {
+            margin-top: 1rem;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            max-width: 640px;
+        }
+        .card {
+            background: #1e1e1e; border-radius: 8px; padding: 12px 14px;
+            border: 1px solid #2a2a2a;
+        }
+        .card-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+        .card-value { font-size: 18px; font-weight: 500; }
+        #landmarkInfo { margin-top: 0.75rem; font-size: 13px; color: #888; min-height: 20px; }
+    </style>
+</head>
+<body>
+<h1>Hand Tracking</h1>
+
+<div class="controls">
+    <button id="startBtn" onclick="startCamera()">Start camera</button>
+    <button id="stopBtn" onclick="stopCamera()" style="display:none;">Stop</button>
+    <span id="statusMsg">Camera off</span>
+</div>
+
+<div class="video-wrapper">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="overlay"></canvas>
+</div>
+
+<div id="landmarkInfo"></div>
+
+<div class="stats">
+    <div class="card">
+        <div class="card-label">Hands detected</div>
+        <div class="card-value" id="handCount">—</div>
+    </div>
+    <div class="card">
+        <div class="card-label">Index finger tip (x, y)</div>
+        <div class="card-value" style="font-size:14px;" id="indexPos">—</div>
+    </div>
+    <div class="card">
+        <div class="card-label">Wrist position (x, y)</div>
+        <div class="card-value" style="font-size:14px;" id="wristPos">—</div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<script>
+    let stream = null;
+    let animFrame = null;
+    let hands = null;
+
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('overlay');
+    const ctx = canvas.getContext('2d');
+
+    const HAND_CONNECTIONS = [
+        [0,1],[1,2],[2,3],[3,4],
+        [0,5],[5,6],[6,7],[7,8],
+        [5,9],[9,10],[10,11],[11,12],
+        [9,13],[13,14],[14,15],[15,16],
+        [13,17],[17,18],[18,19],[19,20],
+        [0,17]
+    ];
+
+    const FINGER_TIPS = [4, 8, 12, 16, 20];
+
+    function setStatus(msg) {
+        document.getElementById('statusMsg').textContent = msg;
+    }
+
+    async function startCamera() {
+        try {
+            setStatus('Requesting camera...');
+            stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+            video.srcObject = stream;
+            await new Promise(r => video.onloadedmetadata = r);
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = '';
+            setStatus('Loading model...');
+
+            hands = new Hands({
+                locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+            });
+            hands.setOptions({
+                maxNumHands: 2,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.7,
+                minTrackingConfidence: 0.5
+            });
+            hands.onResults(onResults);
+            await hands.initialize();
+
+            setStatus('Tracking...');
+            processLoop();
+        } catch (e) {
+            setStatus('Error: ' + e.message);
+        }
+    }
+
+    function stopCamera() {
+        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+        if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        video.srcObject = null;
+        document.getElementById('startBtn').style.display = '';
+        document.getElementById('stopBtn').style.display = 'none';
+        document.getElementById('handCount').textContent = '—';
+        document.getElementById('indexPos').textContent = '—';
+        document.getElementById('wristPos').textContent = '—';
+        document.getElementById('landmarkInfo').textContent = '';
+        setStatus('Camera off');
+    }
+
+    async function processLoop() {
+        if (!stream) return;
+        if (video.readyState >= 2) {
+            await hands.send({ image: video });
+        }
+        animFrame = requestAnimationFrame(processLoop);
+    }
+
+    function onResults(results) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const detected = results.multiHandLandmarks ? results.multiHandLandmarks.length : 0;
+        document.getElementById('handCount').textContent = detected;
+
+        if (!detected) {
+            document.getElementById('indexPos').textContent = '—';
+            document.getElementById('wristPos').textContent = '—';
+            document.getElementById('landmarkInfo').textContent = 'No hands in frame';
+            return;
+        }
+
+        results.multiHandLandmarks.forEach((landmarks, i) => {
+            const label = results.multiHandedness?.[i]?.label || 'Hand';
+
+            // Draw connections
+            HAND_CONNECTIONS.forEach(([a, b]) => {
+                const lA = landmarks[a], lB = landmarks[b];
+                ctx.beginPath();
+                ctx.moveTo(lA.x * canvas.width, lA.y * canvas.height);
+                ctx.lineTo(lB.x * canvas.width, lB.y * canvas.height);
+                ctx.strokeStyle = 'rgba(100, 180, 255, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // Draw landmarks
+            landmarks.forEach((lm, idx) => {
+                const x = lm.x * canvas.width;
+                const y = lm.y * canvas.height;
+                const isTip = FINGER_TIPS.includes(idx);
+                ctx.beginPath();
+                ctx.arc(x, y, isTip ? 7 : 4, 0, 2 * Math.PI);
+                ctx.fillStyle = isTip ? 'rgba(255, 120, 80, 0.95)' : 'rgba(255, 255, 255, 0.9)';
+                ctx.fill();
+                ctx.strokeStyle = isTip ? 'rgba(200, 60, 30, 0.9)' : 'rgba(100, 150, 220, 0.8)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            });
+
+            // Draw hand label
+            const wrist = landmarks[0];
+            ctx.font = '13px sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.95)';
+            ctx.fillText(label, wrist.x * canvas.width + 8, wrist.y * canvas.height - 6);
+
+            // Update stat cards for first hand
+            if (i === 0) {
+                const idx8 = landmarks[8];
+                const wx = Math.round(wrist.x * 100) / 100;
+                const wy = Math.round(wrist.y * 100) / 100;
+                const ix = Math.round(idx8.x * 100) / 100;
+                const iy = Math.round(idx8.y * 100) / 100;
+                document.getElementById('indexPos').textContent = `${ix}, ${iy}`;
+                document.getElementById('wristPos').textContent = `${wx}, ${wy}`;
+                document.getElementById('landmarkInfo').textContent =
+                    `Tracking ${detected} hand${detected > 1 ? 's' : ''} — 21 landmarks each`;
+            }
+        });
+    }
+</script>
+</body>
+</html>
