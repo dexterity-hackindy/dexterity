@@ -7,87 +7,104 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0a0a0f; --surface: #111118; --border: #1e1e2e;
-            --accent: #7cffd4; --accent2: #ff6b6b; --accent3: #ffd166;
-            --text: #e8e8f0; --muted: #555570; --card: #13131e;
+            --bg:#0a0a0f;--surface:#111118;--border:#1e1e2e;
+            --accent:#7cffd4;--accent2:#ff6b6b;--accent3:#ffd166;--accent4:#c084fc;
+            --text:#e8e8f0;--muted:#555570;--card:#13131e;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 1.5rem; overflow-x: hidden; }
-        body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse 60% 40% at 20% 10%, rgba(124,255,212,0.04) 0%, transparent 60%), radial-gradient(ellipse 50% 30% at 80% 80%, rgba(255,107,107,0.04) 0%, transparent 60%); pointer-events: none; z-index: 0; }
-        .app { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; }
-        header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
-        header h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
-        header h1 span { color: var(--accent); }
-        .subtitle { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); letter-spacing: 0.1em; }
-        .model-badge { font-family: 'DM Mono', monospace; font-size: 10px; padding: 3px 8px; background: rgba(255,209,102,0.08); border: 1px solid rgba(255,209,102,0.2); border-radius: 4px; color: var(--accent3); }
-        .model-badge.ready { background: rgba(124,255,212,0.08); border-color: rgba(124,255,212,0.2); color: var(--accent); }
-        .layout { display: grid; grid-template-columns: 1fr 340px; gap: 1.25rem; align-items: start; }
-        .video-panel { display: flex; flex-direction: column; gap: 1rem; }
-        .controls { display: flex; gap: 10px; align-items: center; }
-        .btn { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; transition: all 0.15s; letter-spacing: 0.03em; }
-        .btn:hover { background: var(--border); }
-        .btn.primary { background: var(--accent); color: #000; border-color: var(--accent); }
-        .btn.primary:hover { background: #5de6ba; }
-        .btn.danger { border-color: rgba(255,107,107,0.4); color: var(--accent2); }
-        .btn.danger:hover { background: rgba(255,107,107,0.1); }
-        #statusMsg { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); margin-left: 4px; }
-        #statusMsg.active { color: var(--accent); }
-        .video-wrapper { position: relative; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: #000; aspect-ratio: 4/3; }
-        video { width: 100%; height: 100%; display: block; object-fit: cover; transform: scaleX(-1); }
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1); }
-        .detect-overlay { position: absolute; top: 12px; left: 12px; background: rgba(10,10,15,0.85); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; backdrop-filter: blur(8px); min-width: 90px; }
-        .detect-letter { font-size: 52px; font-weight: 800; color: var(--accent); line-height: 1; }
-        .detect-letter.motion-letter { color: var(--accent3); }
-        .detect-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
-        .confidence-bar { margin-top: 6px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
-        .confidence-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.15s ease; }
-        .motion-indicator { position: absolute; top: 12px; right: 14px; background: rgba(10,10,15,0.85); border: 1px solid rgba(255,209,102,0.35); border-radius: 8px; padding: 6px 10px; backdrop-filter: blur(8px); font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent3); display: none; }
-        .trail-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; transform: scaleX(-1); }
-        .hold-ring { position: absolute; bottom: 14px; right: 14px; width: 56px; height: 56px; }
-        .hold-ring svg { transform: rotate(-90deg); }
-        .hold-ring circle.track { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 4; }
-        .hold-ring circle.fill { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 113; stroke-dashoffset: 113; transition: stroke-dashoffset 0.08s linear; }
-        .hold-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); text-align: center; line-height: 1.2; }
-        .sidebar { display: flex; flex-direction: column; gap: 1rem; }
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; }
-        .card-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.75rem; }
-        .sentence-display { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; color: var(--text); min-height: 60px; line-height: 1.4; word-break: break-word; }
-        .cursor { display: inline-block; width: 2px; height: 1.1em; background: var(--accent); vertical-align: text-bottom; margin-left: 2px; animation: blink 1s step-end infinite; }
-        @keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
-        .sentence-actions { display: flex; gap: 6px; margin-top: 0.75rem; flex-wrap: wrap; }
-        .sentence-actions .btn { font-size: 12px; padding: 5px 12px; }
-        .history-row { display: flex; flex-wrap: wrap; gap: 5px; min-height: 32px; }
-        .hist-chip { font-family: 'DM Mono', monospace; font-size: 13px; padding: 3px 9px; border-radius: 5px; background: var(--surface); border: 1px solid var(--border); color: var(--text); opacity: 0; transform: translateY(4px); animation: chipIn 0.2s ease forwards; }
-        @keyframes chipIn { to { opacity:1; transform:none; } }
-        .hist-chip.word-chip { background: rgba(124,255,212,0.08); border-color: rgba(124,255,212,0.25); color: var(--accent); }
-        .hist-chip.motion-chip { background: rgba(255,209,102,0.08); border-color: rgba(255,209,102,0.25); color: var(--accent3); }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .stat-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-bottom: 2px; }
-        .stat-value { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; }
-        .gesture-guide { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
-        .gesture-cell { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 4px; text-align: center; transition: all 0.15s; }
-        .gesture-cell.active { background: rgba(124,255,212,0.1); border-color: var(--accent); }
-        .gesture-cell.motion-cell { border-color: rgba(255,209,102,0.2); }
-        .gesture-cell.motion-cell.active { background: rgba(255,209,102,0.1); border-color: var(--accent3); }
-        .gesture-letter { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; }
-        .gesture-cell.motion-cell .gesture-letter { color: var(--accent3); }
-        .gesture-desc { font-family: 'DM Mono', monospace; font-size: 8px; color: var(--muted); margin-top: 1px; line-height: 1.3; }
-        @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:1.5rem;overflow-x:hidden;}
+        body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 20% 10%,rgba(124,255,212,.04) 0%,transparent 60%),radial-gradient(ellipse 50% 30% at 80% 80%,rgba(255,107,107,.04) 0%,transparent 60%);pointer-events:none;z-index:0;}
+        .app{position:relative;z-index:1;max-width:1100px;margin:0 auto;}
+        header{display:flex;align-items:baseline;gap:1rem;margin-bottom:2rem;flex-wrap:wrap;}
+        header h1{font-size:28px;font-weight:800;letter-spacing:-.5px;}
+        header h1 span{color:var(--accent);}
+        .subtitle{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);letter-spacing:.1em;}
+        .badge{font-family:'DM Mono',monospace;font-size:10px;padding:3px 8px;border-radius:4px;}
+        .badge-loading{background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.2);color:var(--accent3);}
+        .badge-ready{background:rgba(124,255,212,.08);border:1px solid rgba(124,255,212,.2);color:var(--accent);}
+        .layout{display:grid;grid-template-columns:1fr 340px;gap:1.25rem;align-items:start;}
+        .video-panel{display:flex;flex-direction:column;gap:1rem;}
+        .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+        .btn{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;padding:8px 18px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;transition:all .15s;letter-spacing:.03em;}
+        .btn:hover{background:var(--border);}
+        .btn.primary{background:var(--accent);color:#000;border-color:var(--accent);}
+        .btn.primary:hover{background:#5de6ba;}
+        .btn.danger{border-color:rgba(255,107,107,.4);color:var(--accent2);}
+        .btn.danger:hover{background:rgba(255,107,107,.1);}
+        .btn.mode-num{background:rgba(192,132,252,.15);border-color:var(--accent4);color:var(--accent4);}
+        #statusMsg{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin-left:4px;}
+        #statusMsg.active{color:var(--accent);}
+        .video-wrapper{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#000;aspect-ratio:4/3;}
+        video{width:100%;height:100%;display:block;object-fit:cover;transform:scaleX(-1);}
+        canvas{position:absolute;top:0;left:0;width:100%;height:100%;transform:scaleX(-1);}
+        .detect-overlay{position:absolute;top:12px;left:12px;background:rgba(10,10,15,.85);border:1px solid var(--border);border-radius:8px;padding:8px 14px;backdrop-filter:blur(8px);min-width:90px;}
+        .detect-letter{font-size:52px;font-weight:800;color:var(--accent);line-height:1;}
+        .detect-letter.mot{color:var(--accent3);}
+        .detect-letter.num{color:var(--accent4);}
+        .detect-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px;}
+        .confidence-bar{margin-top:6px;height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+        .conf-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .15s;}
+        .conf-fill.num{background:var(--accent4);}
+        .mot-badge{position:absolute;top:12px;right:14px;background:rgba(10,10,15,.85);border:1px solid rgba(255,209,102,.35);border-radius:8px;padding:6px 10px;backdrop-filter:blur(8px);font-family:'DM Mono',monospace;font-size:11px;color:var(--accent3);display:none;}
+        .trail-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;transform:scaleX(-1);}
+        .mode-pill{position:absolute;bottom:14px;left:14px;font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;border-radius:20px;backdrop-filter:blur(8px);}
+        .mode-pill.let{background:rgba(124,255,212,.12);border:1px solid rgba(124,255,212,.3);color:var(--accent);}
+        .mode-pill.num{background:rgba(192,132,252,.12);border:1px solid rgba(192,132,252,.3);color:var(--accent4);}
+        .hold-ring{position:absolute;bottom:14px;right:14px;width:56px;height:56px;}
+        .hold-ring svg{transform:rotate(-90deg);}
+        .hold-ring circle.track{fill:none;stroke:rgba(255,255,255,.08);stroke-width:4;}
+        .hold-ring circle.fill{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;stroke-dasharray:113;stroke-dashoffset:113;transition:stroke-dashoffset .08s linear;}
+        .hold-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);text-align:center;line-height:1.2;}
+        .sidebar{display:flex;flex-direction:column;gap:1rem;}
+        .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;}
+        .card-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.75rem;}
+        .sentence-display{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--text);min-height:60px;line-height:1.4;word-break:break-word;}
+        .cursor{display:inline-block;width:2px;height:1.1em;background:var(--accent);vertical-align:text-bottom;margin-left:2px;animation:blink 1s step-end infinite;}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+        .sentence-actions{display:flex;gap:6px;margin-top:.75rem;flex-wrap:wrap;}
+        .sentence-actions .btn{font-size:12px;padding:5px 12px;}
+        .history-row{display:flex;flex-wrap:wrap;gap:5px;min-height:32px;}
+        .chip{font-family:'DM Mono',monospace;font-size:13px;padding:3px 9px;border-radius:5px;background:var(--surface);border:1px solid var(--border);color:var(--text);opacity:0;transform:translateY(4px);animation:chipIn .2s ease forwards;}
+        @keyframes chipIn{to{opacity:1;transform:none;}}
+        .chip.space{background:rgba(124,255,212,.08);border-color:rgba(124,255,212,.25);color:var(--accent);}
+        .chip.mot  {background:rgba(255,209,102,.08);border-color:rgba(255,209,102,.25);color:var(--accent3);}
+        .chip.num  {background:rgba(192,132,252,.08);border-color:rgba(192,132,252,.25);color:var(--accent4);}
+        .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+        .stat-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:2px;}
+        .stat-value{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;}
+        .ref-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;}
+        .ref-cell{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 4px;text-align:center;transition:all .15s;}
+        .ref-cell.active{background:rgba(124,255,212,.1);border-color:var(--accent);}
+        .ref-cell.mot-cell{border-color:rgba(255,209,102,.2);}
+        .ref-cell.mot-cell.active{background:rgba(255,209,102,.1);border-color:var(--accent3);}
+        .ref-cell.num-cell{border-color:rgba(192,132,252,.2);}
+        .ref-cell.num-cell.active{background:rgba(192,132,252,.1);border-color:var(--accent4);}
+        .ref-letter{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
+        .ref-cell.mot-cell .ref-letter{color:var(--accent3);}
+        .ref-cell.num-cell .ref-letter{color:var(--accent4);}
+        .ref-desc{font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);margin-top:1px;line-height:1.3;}
+        .debug-panel{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);line-height:1.7;}
+        .top-scores{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;}
+        .sc{padding:2px 7px;border-radius:3px;background:var(--surface);border:1px solid var(--border);font-size:10px;}
+        .sc.best{background:rgba(124,255,212,.12);border-color:var(--accent);color:var(--accent);}
+        .sc.best-num{background:rgba(192,132,252,.12);border-color:var(--accent4);color:var(--accent4);}
+        @media(max-width:800px){.layout{grid-template-columns:1fr;}}
     </style>
 </head>
 <body>
 <div class="app">
     <header>
         <h1>ASL <span>Translator</span></h1>
-        <span class="subtitle">// trained classifier · J&Z motion tracking</span>
-        <span class="model-badge" id="modelBadge">⟳ initializing…</span>
+        <span class="subtitle">// fingerpose + landmark disambig · J&amp;Z motion</span>
+        <span class="badge badge-loading" id="modelBadge">⟳ initializing…</span>
     </header>
 
     <div class="layout">
         <div class="video-panel">
             <div class="controls">
                 <button class="btn primary" id="startBtn" onclick="startCamera()">Start Camera</button>
-                <button class="btn danger" id="stopBtn" onclick="stopCamera()" style="display:none;">Stop</button>
+                <button class="btn danger"  id="stopBtn"  onclick="stopCamera()" style="display:none">Stop</button>
+                <button class="btn"         id="modeBtn"  onclick="toggleMode()" style="display:none">Mode: Letters</button>
                 <span id="statusMsg">Camera off</span>
             </div>
 
@@ -98,16 +115,17 @@
 
                 <div class="detect-overlay">
                     <div class="detect-letter" id="detectLetter">—</div>
-                    <div class="detect-label" id="detectLabel">waiting…</div>
-                    <div class="confidence-bar"><div class="confidence-fill" id="confFill" style="width:0%"></div></div>
+                    <div class="detect-label"  id="detectLabel">waiting…</div>
+                    <div class="confidence-bar"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
                 </div>
 
-                <div class="motion-indicator" id="motionIndicator">✦ motion</div>
+                <div class="mot-badge" id="motBadge">✦ motion</div>
+                <div class="mode-pill let" id="modePill">LETTERS</div>
 
                 <div class="hold-ring">
                     <svg viewBox="0 0 44 44" width="56" height="56">
                         <circle class="track" cx="22" cy="22" r="18"/>
-                        <circle class="fill" id="holdArc" cx="22" cy="22" r="18"/>
+                        <circle class="fill"  id="holdArc" cx="22" cy="22" r="18"/>
                     </svg>
                     <div class="hold-label" id="holdLabel">hold<br>sign</div>
                 </div>
@@ -135,801 +153,598 @@
                 <div class="card-title">Session Stats</div>
                 <div class="stats-grid">
                     <div><div class="stat-label">Hands detected</div><div class="stat-value" id="handCount">—</div></div>
-                    <div><div class="stat-label">Letters added</div><div class="stat-value" id="lettersAdded">0</div></div>
+                    <div><div class="stat-label">Signs added</div><div class="stat-value" id="signsAdded">0</div></div>
                     <div><div class="stat-label">Current sign</div><div class="stat-value" id="currentSign">—</div></div>
                     <div><div class="stat-label">Confidence</div><div class="stat-value" id="confPct">—</div></div>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-title">ASL Reference <span style="color:var(--accent3);font-size:9px;margin-left:4px;">★ motion sign</span></div>
-                <div class="gesture-guide" id="gestureGuide"></div>
+                <div class="card-title">
+                    Reference
+                    <span style="color:var(--accent3);font-size:9px;margin-left:4px;">★ motion</span>
+                    <span style="color:var(--accent4);font-size:9px;margin-left:4px;">◆ number</span>
+                </div>
+                <div class="ref-grid" id="refGrid"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Live Debug</div>
+                <div class="debug-panel">
+                    <div class="top-scores" id="topScores">—</div>
+                    <div id="debugInfo" style="font-size:9px;color:var(--muted)"></div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose@0.0.7/dist/handpose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fingerpose@0.1.0/dist/fingerpose.min.js"></script>
 <script>
-    /* ════════════════════════════════════════════════════════════════
-       FEATURE ENGINEERING
-       Input: 21 MediaPipe landmarks (x,y,z)
-       Output: 99-dimensional feature vector:
-         - 63 normalized coordinates (21 × 3)
-         - 15 pairwise distances (fingertip pairs + key joints)
-         - 21 relative-to-wrist angles
-       ════════════════════════════════════════════════════════════════ */
-
-    function extractFeatures(lm) {
-        const wrist = lm[0];
-        // Scale reference: distance wrist → middle MCP
-        const palmRef = Math.hypot(lm[9].x - wrist.x, lm[9].y - wrist.y, lm[9].z - wrist.z) || 1;
-
-        const norm = lm.map(p => ({
-            x: (p.x - wrist.x) / palmRef,
-            y: (p.y - wrist.y) / palmRef,
-            z: (p.z - wrist.z) / palmRef
-        }));
-
-        // 63 coordinates
-        const coords = norm.flatMap(p => [p.x, p.y, p.z]);
-
-        // 15 key distances
-        const pairs = [[4,8],[4,12],[4,16],[4,20],[8,12],[8,16],[8,20],
-            [12,16],[12,20],[16,20],[3,6],[3,10],[3,14],[3,18],[0,9]];
-        const dists = pairs.map(([a,b]) =>
-            Math.hypot(norm[a].x-norm[b].x, norm[a].y-norm[b].y, norm[a].z-norm[b].z));
-
-        // 21 angles from wrist (azimuth in xy plane)
-        const angles = norm.map(p => Math.atan2(p.y, p.x) / Math.PI);
-
-        return new Float32Array([...coords, ...dists, ...angles]); // 99 dims
+    /* ─── geometry helpers ─── */
+    function normLM(lm){
+        var w=lm[0],sc=Math.hypot(lm[9].x-w.x,lm[9].y-w.y,lm[9].z-w.z)||0.001;
+        return lm.map(function(p){return{x:(p.x-w.x)/sc,y:(p.y-w.y)/sc,z:(p.z-w.z)/sc};});
+    }
+    function d3(n,a,b){return Math.hypot(n[a].x-n[b].x,n[a].y-n[b].y,n[a].z-n[b].z);}
+    function d2(n,a,b){return Math.hypot(n[a].x-n[b].x,n[a].y-n[b].y);}
+    function ext(n,tip,pip,mcp,thr){
+        if(thr===undefined)thr=0.35;
+        var len=Math.hypot(n[pip].x-n[mcp].x,n[pip].y-n[mcp].y)+0.001;
+        return(n[mcp].y-n[tip].y)>len*thr;
+    }
+    /* Adapt TF.js [[x,y,z],...] pixel coords → [{x,y,z},...] normalised 0–1 */
+    function adaptLM(tfLM,W,H){
+        return tfLM.map(function(p){return{x:p[0]/W,y:p[1]/H,z:p[2]/W};});
     }
 
-    /* ════════════════════════════════════════════════════════════════
-       TENSORFLOW.JS MODEL
-       We build and "train" (via analytically set weights representing
-       class prototypes) a small FC network at startup.
-       Architecture: 99 → Dense(256,relu) → Dense(128,relu) → Dense(24,softmax)
-       Prototype weights computed from ASL landmark cluster centroids.
-       ════════════════════════════════════════════════════════════════ */
+    /* ─── softmax helper ─── */
+    function smResult(scores,labels){
+        var vals=labels.map(function(l){return scores[l]||0;});
+        var mx=Math.max.apply(null,vals);
+        var ex=vals.map(function(v){return Math.exp((v-mx)/0.9);});
+        var sm=ex.reduce(function(a,b){return a+b;},0);
+        var pr=ex.map(function(v){return v/sm;});
+        var bi=pr.reduce(function(bi,v,i){return v>pr[bi]?i:bi;},0);
+        var sorted=labels.map(function(l,i){return{l:l,s:Math.round(scores[l]||0),p:Math.round(pr[i]*100)};});
+        sorted.sort(function(a,b){return b.s-a.s;});
+        return{label:labels[bi],confidence:pr[bi],top:sorted.slice(0,5)};
+    }
 
-    const STATIC_LABELS = ['A','B','C','D','E','F','G','H','I','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y'];
-    // J=index 9 in alpha (skipped), Z=index 25 (skipped) — handled by motion detector
+    /* ══════════════════════════════════════════════════════════════════
+       FINGERPOSE SETUP
+       All 24 static ASL letters defined using fingerpose's curl/direction
+       descriptors. Because many letters share the same coarse shape
+       (A/E/M/N/S/T are all-curl fists; U/V/R differ only by spread),
+       fingerpose scores are used as a BASE and our raw-landmark
+       disambiguation adds decisive boosts for confusable pairs.
+    ══════════════════════════════════════════════════════════════════ */
+    var estimator=null;
 
-    let tfModel = null;
+    function setupFingerpose(){
+        var FC=fp.FingerCurl, FD=fp.FingerDirection, F=fp.Finger, GD=fp.GestureDescription;
+        var NC=FC.NoCurl, HC=FC.HalfCurl, FuC=FC.FullCurl;
+        var VU=FD.VerticalUp, VD=FD.VerticalDown;
+        var HL=FD.HorizontalLeft, HR=FD.HorizontalRight;
+        var DUR=FD.DiagonalUpRight, DUL=FD.DiagonalUpLeft;
+        var DDR=FD.DiagonalDownRight, DDL=FD.DiagonalDownLeft;
 
-    // Per-class feature prototypes (cluster centroids derived from landmark geometry)
-    // These encode the canonical hand shape for each letter.
-    // Each row = [finger extension bools × 5, key distances × 15, angle features × 4]
-    // The model uses these to initialize a 1-NN-style layer that generalizes well.
+        function mkG(name,curls,dirs){
+            var g=new GD(name);
+            (curls||[]).forEach(function(c){g.addCurl(c[0],c[1],c[2]||1.0);});
+            (dirs||[]).forEach(function(d){g.addDirection(d[0],d[1],d[2]||1.0);});
+            return g;
+        }
 
-    function buildPrototypes() {
-        // Returns 24 × 99 prototype matrix
-        // Each prototype is constructed from known ASL anatomy
-        const P = [];
+        var gestures=[
+            // A: fist, thumb to side (not tucked, not over fingers)
+            mkG('A',[[F.Thumb,NC],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]],
+                [[F.Thumb,HR,0.9],[F.Thumb,DUR,0.9]]),
 
-        function makeProto(config) {
-            // config: { thumb, index, middle, ring, pinky, tiDist, tmDist, imDist, mrDist, rpDist }
-            const v = new Float32Array(99).fill(0);
+            // B: all 4 fingers straight up, thumb tucked
+            mkG('B',[[F.Thumb,FuC],[F.Index,NC],[F.Middle,NC],[F.Ring,NC],[F.Pinky,NC]],
+                [[F.Index,VU],[F.Middle,VU],[F.Ring,VU],[F.Pinky,VU]]),
 
-            // Simulate normalized landmarks based on config
-            // Fingers: 0=curled(y≈0.3 relative), 1=extended(y≈-1.2 relative)
-            const extY = -1.1, curlY = 0.3, midZ = -0.1;
-            const fingerBase = [5, 9, 13, 17]; // MCP indices
-            const fingerTips  = [8, 12, 16, 20];
-            const fingerMid   = [6, 10, 14, 18]; // PIP
+            // C: all fingers half-curl forming a cup
+            mkG('C',[[F.Thumb,NC,0.8],[F.Index,HC],[F.Middle,HC],[F.Ring,HC],[F.Pinky,HC,0.8]],
+                [[F.Thumb,DUR,0.7],[F.Index,DUR,0.5],[F.Index,HR,0.5]]),
 
-            ['index','middle','ring','pinky'].forEach((name, fi) => {
-                const ext = config[name];
-                const tipIdx = fingerTips[fi];
-                const mcpIdx = fingerBase[fi];
-                const baseX = (fi - 1.5) * 0.3;
-                // MCP
-                v[mcpIdx*3]   = baseX;
-                v[mcpIdx*3+1] = -0.3;
-                v[mcpIdx*3+2] = 0;
-                // Tip
-                v[tipIdx*3]   = baseX * (ext ? 0.9 : 1.1);
-                v[tipIdx*3+1] = ext ? extY : curlY;
-                v[tipIdx*3+2] = ext ? midZ : 0.2;
+            // D: index straight up, others curl to touch thumb
+            mkG('D',[[F.Thumb,HC,0.8],[F.Index,NC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]],
+                [[F.Index,VU]]),
+
+            // E: all fingers hooked down (full curl), thumb tucked under
+            mkG('E',[[F.Thumb,FuC],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]]),
+
+            // F: index+thumb pinch, middle/ring/pinky extended up
+            mkG('F',[[F.Thumb,HC],[F.Index,HC],[F.Middle,NC],[F.Ring,NC],[F.Pinky,NC]],
+                [[F.Middle,VU],[F.Ring,VU],[F.Pinky,VU]]),
+
+            // G: index+thumb point horizontally, others closed
+            mkG('G',[[F.Thumb,NC],[F.Index,NC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]],
+                [[F.Index,HR,0.9],[F.Index,HL,0.9],[F.Thumb,HR,0.8],[F.Thumb,HL,0.8]]),
+
+            // H: index+middle point sideways together, others closed
+            mkG('H',[[F.Thumb,FuC,0.8],[F.Index,NC],[F.Middle,NC],[F.Ring,FuC],[F.Pinky,FuC]],
+                [[F.Index,HR,0.9],[F.Index,HL,0.9],[F.Middle,HR,0.9],[F.Middle,HL,0.9]]),
+
+            // I: only pinky up
+            mkG('I',[[F.Thumb,FuC,0.7],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,NC]],
+                [[F.Pinky,VU]]),
+
+            // K: index+middle up, thumb contacts index from side
+            mkG('K',[[F.Thumb,NC],[F.Index,NC],[F.Middle,NC],[F.Ring,FuC],[F.Pinky,FuC]],
+                [[F.Index,VU],[F.Middle,VU,0.8],[F.Thumb,DUR,0.8]]),
+
+            // L: index up, thumb out horizontal (L-shape)
+            mkG('L',[[F.Thumb,NC],[F.Index,NC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]],
+                [[F.Index,VU],[F.Thumb,HR,0.9],[F.Thumb,HL,0.9],[F.Thumb,DUR,0.7]]),
+
+            // M: index+middle+ring curl over thumb (all curl — distinguished by landmarks)
+            mkG('M',[[F.Thumb,FuC],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]]),
+
+            // N: index+middle curl over thumb only (landmark-disambiguated from M)
+            mkG('N',[[F.Thumb,FuC],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]]),
+
+            // O: all fingers form an O (half curl meeting thumb)
+            mkG('O',[[F.Thumb,HC,0.8],[F.Index,HC],[F.Middle,HC],[F.Ring,HC],[F.Pinky,HC]]),
+
+            // P: index pointing downward
+            mkG('P',[[F.Thumb,NC,0.8],[F.Index,NC],[F.Middle,HC,0.7],[F.Ring,FuC],[F.Pinky,FuC]],
+                [[F.Index,VD],[F.Index,DDR,0.8],[F.Index,DDL,0.8]]),
+
+            // Q: G shape rotated downward
+            mkG('Q',[[F.Thumb,NC,0.8],[F.Index,NC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]],
+                [[F.Index,VD],[F.Index,DDR,0.8],[F.Thumb,VD,0.7]]),
+
+            // R: index+middle both up (crossing landmark-disambiguated)
+            mkG('R',[[F.Thumb,FuC,0.7],[F.Index,NC],[F.Middle,NC],[F.Ring,FuC],[F.Pinky,FuC]],
+                [[F.Index,VU],[F.Middle,VU]]),
+
+            // S: fist, thumb wrapped over curled fingers
+            mkG('S',[[F.Thumb,HC],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]]),
+
+            // T: thumb tucked between index and middle knuckles
+            mkG('T',[[F.Thumb,HC],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]]),
+
+            // U: index+middle up, parallel (close together)
+            mkG('U',[[F.Thumb,FuC,0.7],[F.Index,NC],[F.Middle,NC],[F.Ring,FuC],[F.Pinky,FuC]],
+                [[F.Index,VU],[F.Middle,VU]]),
+
+            // V: index+middle up, spread apart (peace sign)
+            mkG('V',[[F.Thumb,FuC,0.7],[F.Index,NC],[F.Middle,NC],[F.Ring,FuC],[F.Pinky,FuC]],
+                [[F.Index,VU],[F.Middle,VU]]),
+
+            // W: index+middle+ring up
+            mkG('W',[[F.Thumb,FuC,0.7],[F.Index,NC],[F.Middle,NC],[F.Ring,NC],[F.Pinky,FuC]],
+                [[F.Index,VU],[F.Middle,VU],[F.Ring,VU]]),
+
+            // X: index hooked (half curl), others closed
+            mkG('X',[[F.Thumb,FuC,0.7],[F.Index,HC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]],
+                [[F.Index,VD,0.7],[F.Index,DDR,0.5]]),
+
+            // Y: thumb + pinky extended, others closed
+            mkG('Y',[[F.Thumb,NC],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,NC]],
+                [[F.Thumb,HR,0.9],[F.Thumb,DUR,0.7],[F.Pinky,VU,0.7],[F.Pinky,DUL,0.7]])
+        ];
+
+        estimator=new fp.GestureEstimator(gestures);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════
+       LETTER CLASSIFIER  — fingerpose base + raw-landmark disambiguation
+       fingerpose gives us curl/direction scores (0–10) for each letter.
+       For confusable pairs (A/E/S/M/N/T, U/V/R/K, D/P/G/Q, I/Y, O/C)
+       we add strong landmark-derived boosts so the classifier can still
+       tell them apart despite fingerpose's coarser resolution.
+    ══════════════════════════════════════════════════════════════════ */
+    var LETTERS=['A','B','C','D','E','F','G','H','I','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y'];
+
+    function classifyLetter(tfLM, lm){
+        /* ── fingerpose base scores (scale 0–10 → 0–12) ── */
+        var s={};
+        LETTERS.forEach(function(l){s[l]=0;});
+        if(estimator){
+            var fpRes=estimator.estimate(tfLM, 5.0);
+            fpRes.gestures.forEach(function(g){
+                if(s.hasOwnProperty(g.name)) s[g.name]=g.score*1.2;
             });
-
-            // Thumb
-            const tExt = config.thumb;
-            v[4*3]   = tExt ? -0.8 : -0.15;
-            v[4*3+1] = tExt ? -0.2 : 0.15;
-            v[4*3+2] = tExt ? -0.1 : 0.1;
-
-            // Key distances
-            const tip = (i) => [v[i*3],v[i*3+1],v[i*3+2]];
-            const dist = (a,b) => { const ta=tip(a),tb=tip(b); return Math.hypot(ta[0]-tb[0],ta[1]-tb[1],ta[2]-tb[2]); };
-
-            v[63] = config.tiDist !== undefined ? config.tiDist : dist(4,8);
-            v[64] = config.tmDist !== undefined ? config.tmDist : dist(4,12);
-            v[65] = dist(4,16); v[66] = dist(4,20);
-            v[67] = config.imDist !== undefined ? config.imDist : dist(8,12);
-            v[68] = dist(8,16); v[69] = dist(8,20);
-            v[70] = config.mrDist !== undefined ? config.mrDist : dist(12,16);
-            v[71] = dist(12,20);
-            v[72] = config.rpDist !== undefined ? config.rpDist : dist(16,20);
-
-            return v;
         }
 
-        return P;
-    }
+        /* ── raw landmark features for disambiguation ── */
+        var n=normLM(lm);
+        var iE=ext(n,8,6,5),  mE=ext(n,12,10,9), rE=ext(n,16,14,13), pE=ext(n,20,18,17);
+        var iEL=ext(n,8,6,5,.1), mEL=ext(n,12,10,9,.1);
+        var ic=n[8].y-n[5].y, mc=n[12].y-n[9].y, rc=n[16].y-n[13].y;
+        var ti=d3(n,4,8), tm=d3(n,4,12);
+        var im=d3(n,8,12), mr=d3(n,12,16), rp=d3(n,16,20);
+        var tAbs=Math.abs(n[4].x-n[2].x), tEx=tAbs>0.35, tUp=n[4].y<n[2].y-0.2;
+        var tUI=n[4].y>n[6].y, tOK=n[4].y<n[5].y&&n[4].y<n[9].y;
+        var tBIP=n[4].y>n[5].y&&n[4].y<n[6].y, tBIJ=n[4].y>n[5].y&&n[4].y<n[7].y;
+        var iDx=n[8].x-n[5].x, iDy=n[8].y-n[5].y, iAng=Math.atan2(iDy,iDx);
+        var iUp=iAng<-1.1, iDn=iDy>0.25&&Math.abs(iDx)<Math.abs(iDy);
+        var iHz=Math.abs(iAng)>1.3&&Math.abs(iAng)<Math.PI-0.2;
+        var iHk=n[8].y>n[5].y&&n[8].y<n[6].y+0.3;
+        var ac=!iE&&!mE&&!rE&&!pE;
 
-    async function buildTFModel() {
-        // Build a proper TF.js sequential model
-        const model = tf.sequential();
-
-        model.add(tf.layers.dense({
-            inputShape: [99], units: 256, activation: 'relu',
-            kernelInitializer: 'glorotUniform', biasInitializer: 'zeros'
-        }));
-        model.add(tf.layers.batchNormalization());
-        model.add(tf.layers.dropout({ rate: 0.3 }));
-        model.add(tf.layers.dense({
-            units: 128, activation: 'relu',
-            kernelInitializer: 'glorotUniform'
-        }));
-        model.add(tf.layers.dropout({ rate: 0.2 }));
-        model.add(tf.layers.dense({
-            units: 24, activation: 'softmax',
-            kernelInitializer: 'glorotUniform'
-        }));
-
-        model.compile({ optimizer: 'adam', loss: 'categoricalCrossentropy', metrics: ['accuracy'] });
-        return model;
-    }
-
-    /* ════════════════════════════════════════════════════════════════
-       HIGH-ACCURACY DISCRIMINANT CLASSIFIER
-       Since we can't download pretrained weights at runtime, we use a
-       carefully engineered per-class scoring system that mimics a
-       trained NN's decision boundaries using the full feature vector.
-       This achieves substantially higher accuracy than the previous
-       simple heuristics by:
-       1. Using normalized features (scale-invariant)
-       2. Computing multi-factor class scores
-       3. Using softmax temperature to sharpen distinctions
-       4. Handling visually similar pairs with dedicated disambiguation
-       ════════════════════════════════════════════════════════════════ */
-
-    function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
-
-    function classifyLandmarks(lm) {
-        const wrist = lm[0];
-        const palmRef = Math.hypot(lm[9].x-wrist.x, lm[9].y-wrist.y, lm[9].z-wrist.z) || 1;
-
-        const n = lm.map(p => ({
-            x:(p.x-wrist.x)/palmRef,
-            y:(p.y-wrist.y)/palmRef,
-            z:(p.z-wrist.z)/palmRef
-        }));
-
-        function dist(a,b){ return Math.hypot(n[a].x-n[b].x,n[a].y-n[b].y,n[a].z-n[b].z); }
-
-        // Finger extension: tip significantly above pip = extended
-        function ext(tip, pip, mcp) {
-            // more robust: tip above mcp by >50% of finger length
-            const fingerLen = Math.hypot(n[pip].x-n[mcp].x, n[pip].y-n[mcp].y);
-            return (n[mcp].y - n[tip].y) > fingerLen * 0.4;
+        /* ── A/E/S/M/N/T disambiguation (all-curl fists) ── */
+        if(ac){
+            if(tOK){s['S']+=6;s['A']-=4;s['E']-=4;s['M']-=2;s['N']-=2;s['T']-=3;}
+            else if(tUI&&ti<0.5){s['E']+=5;s['A']-=3;s['S']-=4;}
+            else if(!tUI&&!tOK&&tAbs>0.25){s['A']+=5;s['S']-=4;s['E']-=3;}
+            if(tBIP||tBIJ){s['T']+=6;s['A']-=3;s['S']-=4;s['E']-=3;}
+            if(n[4].y>n[14].y){s['M']+=5;s['N']-=4;}
+            else if(n[4].y>n[10].y&&n[4].y<n[14].y){s['N']+=5;s['M']-=4;}
+            if(iHk){s['X']+=4;s['E']-=1;s['A']-=1;}else{s['X']-=4;}
         }
 
-        const iExt  = ext(8, 6, 5);
-        const mExt  = ext(12,10, 9);
-        const rExt  = ext(16,14,13);
-        const pkExt = ext(20,18,17);
-        const tExt  = n[4].x < n[3].x; // thumb abducted outward (mirrored feed)
+        /* ── O vs C ── */
+        if(ti<0.38){s['O']+=6;s['C']-=5;}
+        else if(ti>0.45&&ti<1.4){s['C']+=5;s['O']-=4;}
 
-        const extCount = [iExt,mExt,rExt,pkExt].filter(Boolean).length;
-
-        // Distances (normalized)
-        const ti = dist(4,8),  tm = dist(4,12), tr_ = dist(4,16), tp = dist(4,20);
-        const im = dist(8,12), ir = dist(8,16),  ip  = dist(8,20);
-        const mr = dist(12,16),mp = dist(12,20), rp  = dist(16,20);
-
-        // Curl depths: positive means tip is below mcp (curled)
-        const iCurl  = n[8].y  - n[5].y;
-        const mCurl  = n[12].y - n[9].y;
-        const rCurl  = n[16].y - n[13].y;
-        const pkCurl = n[20].y - n[17].y;
-
-        // Thumb position relative to index MCP
-        const tAbdX = Math.abs(n[4].x - n[5].x);
-        const tAbdY = n[5].y - n[4].y; // positive: thumb tip above index MCP
-
-        // Index pointing angle
-        const iAngle = Math.atan2(n[8].y - n[5].y, n[8].x - n[5].x); // radians
-
-        // Finger spread (adjacent fingertip separation)
-        const imSpread = im;
-        const mrSpread = mr;
-        const rpSpread = rp;
-
-        // Is thumb tucked under fingers?
-        const thumbUnder = n[4].y > n[6].y;
-        const thumbOverFingers = n[4].y < n[6].y && n[4].y < n[10].y;
-
-        const scores = {};
-
-        // ── A: compact fist, thumb abducted to side, not tucked ──
-        scores['A'] = (
-            (!iExt?3:0) + (!mExt?3:0) + (!rExt?3:0) + (!pkExt?3:0) +
-            (tExt?2:0) + (tAbdX>0.25?2:-2) + (!thumbUnder?1:-1) +
-            (ti>0.6?1:-1) + (iCurl>0.1?1:0) + (mCurl>0.1?1:0)
-        );
-
-        // ── B: all 4 fingers extended, thumb tucked, fingers together ──
-        scores['B'] = (
-            (iExt?3:0) + (mExt?3:0) + (rExt?3:0) + (pkExt?3:0) +
-            (!tExt?2:0) + (ti<0.8?1:0) +
-            (im<0.45?1.5:0) + (mr<0.45?1.5:0) + (rp<0.5?1:0)
-        );
-
-        // ── C: curved C, partial curl all fingers, thumb opposite ──
-        scores['C'] = (
-            (ti>0.5&&ti<1.5?3:0) + (tm>0.4&&tm<1.4?1.5:0) +
-            (!iExt?0.5:extCount<=1?0.5:-1) +
-            (n[4].x < n[8].x ? 1.5 : -1) + // thumb on opposite side
-            (tp>0.7?1:0) + (extCount<=2?1:-2)
-        );
-
-        // ── D: index extended up, other 3 curl and touch thumb ──
-        scores['D'] = (
-            (iExt?3:0) + (!mExt?2.5:0) + (!rExt?2.5:0) + (!pkExt?2.5:0) +
-            (tm<0.6?1.5:-1) + (tr_<0.7?1:-0.5) + (ti>0.4?1:0) +
-            (iAngle < -1.0 ? 2 : 0) // index pointing up
-        );
-
-        // ── E: all curled, tips close to palm, including thumb ──
-        scores['E'] = (
-            (!iExt?2.5:0) + (!mExt?2.5:0) + (!rExt?2.5:0) + (!pkExt?2.5:0) +
-            (!tExt?1.5:0) + (ti<0.55?2:-1) + (im<0.45?1.5:-1) +
-            (iCurl>0.05?1.5:0) + (mCurl>0.05?1.5:0) + (thumbUnder?1:0)
-        );
-
-        // ── F: index+thumb pinched (touch/near), middle/ring/pinky extended ──
-        scores['F'] = (
-            (ti<0.28?4:-2) + (mExt?2:0) + (rExt?2:0) + (pkExt?2:0) +
-            (!iExt?0.5:0)
-        );
-
-        // ── G: index + thumb horizontal point right/left, others closed ──
-        scores['G'] = (
-            (iExt?1.5:0) + (!mExt?2:0) + (!rExt?2:0) + (!pkExt?2:0) +
-            (tExt?1.5:0) +
-            (Math.abs(iAngle) > 1.3 && Math.abs(iAngle) < Math.PI-0.2 ? 2.5 : -1) +
-            (n[8].y > n[5].y - 0.1 && n[8].y < n[5].y + 0.5 ? 1 : -1) // roughly horizontal
-        );
-
-        // ── H: index+middle point sideways, together, others closed ──
-        scores['H'] = (
-            (iExt?2:0) + (mExt?2:0) + (!rExt?2:0) + (!pkExt?2:0) +
-            (im<0.3?2.5:-2) + // fingers together
-            (Math.abs(iAngle)>1.1?2:-1) // pointing sideways
-        );
-
-        // ── I: ONLY pinky up ──
-        scores['I'] = (
-            (!iExt?3:0) + (!mExt?3:0) + (!rExt?3:0) + (pkExt?3.5:0) +
-            (!tExt?1:0) + (ip>1.0?1.5:0) + (pkCurl < -0.3?1.5:0)
-        );
-
-        // ── K: index+middle up in V-like, thumb tucked between them ──
-        scores['K'] = (
-            (iExt?2.5:0) + (mExt?2.5:0) + (!rExt?2:0) + (!pkExt?2:0) +
-            (tExt?1.5:0) + (ti<0.7?1.5:-1) + (im>0.25?1:-1)
-        );
-
-        // ── L: thumb + index L-shape ──
-        scores['L'] = (
-            (tExt?3:0) + (iExt?3:0) + (!mExt?2:0) + (!rExt?2:0) + (!pkExt?2:0) +
-            (tAbdX>0.35?2:-1) +
-            (iAngle < -0.8 ? 2 : 0) // index pointing up
-        );
-
-        // ── M: 3 fingers folded DOWN over thumb (thumb under index/mid/ring) ──
-        scores['M'] = (
-            (!iExt?2:0) + (!mExt?2:0) + (!rExt?2:0) + (!pkExt?1.5:0) +
-            (iCurl>0.15?1.5:0) + (mCurl>0.15?1.5:0) + (rCurl>0.15?1:0) +
-            (n[4].y > n[6].y ? 2.5 : -2) + // thumb under index pip
-            (n[4].y > n[10].y ? 1.5 : -1)   // thumb under middle pip
-        );
-
-        // ── N: 2 fingers folded over thumb (index+middle over thumb) ──
-        scores['N'] = (
-            (!iExt?2:0) + (!mExt?2:0) + (!rExt?2:0) + (!pkExt?2:0) +
-            (iCurl>0.1?1.5:0) + (mCurl>0.1?1.5:0) +
-            (n[4].y > n[6].y ? 2 : -2) +
-            (n[4].y < n[10].y ? 1.5 : -1) // thumb NOT under middle pip (distinguishes from M)
-        );
-
-        // ── O: rounded O shape, all fingers curved to meet thumb ──
-        scores['O'] = (
-            (ti<0.42?3.5:-1) + (tm<0.55?1.5:0) + (tr_<0.7?1:0) +
-            (ti>0.08?1:0) + (extCount<=1?1.5:-2)
-        );
-
-        // ── P: index pointing DOWN-forward, thumb out ──
-        scores['P'] = (
-            (iExt?1.5:0) + (!mExt?1.5:0) + (!rExt?1.5:0) + (!pkExt?1.5:0) +
-            (n[8].y > n[5].y + 0.2 ? 3 : -2) + // index tip below MCP
-            (tExt?1:0)
-        );
-
-        // ── Q: G-shape rotated downward ──
-        scores['Q'] = (
-            (iExt?1.5:0) + (!mExt?1.5:0) + (!rExt?1.5:0) + (!pkExt?1.5:0) +
-            (n[8].y > n[5].y ? 2.5 : -2) + // index pointing down
-            (tExt?1:0) + (ti<0.8?1:0)
-        );
-
-        // ── R: index+middle crossed (very close together) ──
-        scores['R'] = (
-            (iExt?2:0) + (mExt?2:0) + (!rExt?2:0) + (!pkExt?2:0) +
-            (im < 0.18 ? 4.5 : im < 0.25 ? 2 : -3) // very close = crossed
-        );
-
-        // ── S: fist, thumb wrapped OVER curled fingers ──
-        scores['S'] = (
-            (!iExt?2:0) + (!mExt?2:0) + (!rExt?2:0) + (!pkExt?2:0) +
-            (thumbOverFingers?3:-1) + (ti<0.45?1.5:-1) +
-            (tAbdX<0.25?1:-1)
-        );
-
-        // ── T: thumb tip between index and middle knuckles ──
-        scores['T'] = (
-            (!iExt?2:0) + (!mExt?2:0) + (!rExt?2:0) + (!pkExt?2:0) +
-            (n[4].y < n[6].y ? 2.5 : -2) + // thumb tip above index pip
-            (n[4].y > n[10].y ? -1 : 1.5) + // but below middle pip
-            (ti<0.4?2:-1)
-        );
-
-        // ── U: index+middle together pointing up ──
-        scores['U'] = (
-            (iExt?2.5:0) + (mExt?2.5:0) + (!rExt?2:0) + (!pkExt?2:0) +
-            (im<0.28?3:-2) + // fingers together (key distinction from V)
-            (iAngle < -0.7 ? 1.5 : 0)
-        );
-
-        // ── V: index+middle spread apart (peace sign) ──
-        scores['V'] = (
-            (iExt?2.5:0) + (mExt?2.5:0) + (!rExt?2:0) + (!pkExt?2:0) +
-            (im>0.30?3:-2) + // fingers spread (key distinction from U)
-            (iAngle < -0.6 ? 1 : 0)
-        );
-
-        // ── W: index+middle+ring all extended up ──
-        scores['W'] = (
-            (iExt?2.5:0) + (mExt?2.5:0) + (rExt?2.5:0) + (!pkExt?2:0) +
-            (im>0.2?1:0) + (mr>0.2?1:0) // some spread
-        );
-
-        // ── X: index finger hooked (bent at pip but not fully curled) ──
-        scores['X'] = (
-            (!mExt?2:0) + (!rExt?2:0) + (!pkExt?2:0) +
-            // Index bent but not straight down
-            (iCurl > -0.15 && iCurl < 0.3 ? 3 : -2) +
-            (!iExt?1.5:0) +
-            (n[8].y > n[6].y && n[8].y < n[5].y ? 3 : 0) // tip between pip and mcp
-        );
-
-        // ── Y: thumb + pinky out, others closed ──
-        scores['Y'] = (
-            (!iExt?2:0) + (!mExt?2:0) + (!rExt?2:0) +
-            (pkExt?3:0) + (tExt?3:0) +
-            (tAbdX>0.25?1.5:0) + (tp>0.8?1.5:0)
-        );
-
-        // ── Disambiguation boosts for confusable pairs ──
-
-        // A vs E vs S: all closed fists
-        // A: thumb side, E: fingers hook over thumb, S: thumb over fingers
-        const isClosedFist = !iExt && !mExt && !rExt && !pkExt;
-        if (isClosedFist) {
-            if (tAbdX > 0.3 && !thumbUnder && !thumbOverFingers) scores['A'] += 3;
-            if (ti < 0.5 && thumbUnder) scores['E'] += 2;
-            if (thumbOverFingers && ti < 0.5) scores['S'] += 3;
+        /* ── R vs U vs V vs K vs H ── */
+        if(iE&&mE&&!rE&&!pE){
+            if(im<0.18){s['R']+=7;s['U']-=5;s['V']-=5;}
+            else if(im<0.30){s['U']+=6;s['R']-=4;s['V']-=4;}
+            else{s['V']+=6;s['U']-=4;s['R']-=4;}
+            if(d2(n,4,10)<0.55&&(tUp||d2(n,4,5)<0.55)){s['K']+=5;s['U']-=2;s['V']-=2;}
+            else{s['K']-=3;}
+            if(iHz){s['H']+=4;s['U']-=2;}
+            else if(iUp){s['U']+=2;s['H']-=3;}
         }
 
-        // U vs R: both index+middle up
-        // R: fingers crossed (very small im distance)
-        // U: fingers parallel (small but > R)
-        if (iExt && mExt && !rExt && !pkExt) {
-            if (im < 0.18) { scores['R'] += 3; scores['U'] -= 2; }
-            else if (im < 0.28) { scores['U'] += 2; scores['R'] -= 1; }
-            else { scores['V'] += 2; }
+        /* ── D vs P vs G vs Q ── */
+        if(iEL&&!mE&&!rE&&!pE){
+            if(iUp){s['D']+=5;s['P']-=4;s['Q']-=3;}
+            if(iDn){s['P']+=5;s['D']-=4;}
+            if(iHz){s['G']+=4;s['Q']-=3;}
+            else if(iDn||n[8].y>n[5].y+0.2){s['Q']+=4;s['G']-=3;}
         }
 
-        // M vs N vs T: all fingers closed, thumb position varies
-        if (isClosedFist) {
-            if (n[4].y > n[10].y) { scores['M'] += 2; scores['N'] -= 1; scores['T'] -= 2; }
-            else if (n[4].y > n[6].y && n[4].y < n[10].y) { scores['N'] += 2; scores['M'] -= 1; }
-            else if (n[4].y < n[6].y) { scores['T'] += 2; scores['N'] -= 1; }
+        /* ── I vs Y ── */
+        if(pE){
+            if(tEx&&tAbs>0.3){s['Y']+=5;s['I']-=4;}
+            else{s['I']+=4;s['Y']-=3;}
         }
 
-        // Convert to softmax probabilities
-        const vals = STATIC_LABELS.map(l => scores[l] || 0);
-        const maxV = Math.max(...vals);
-        const exps = vals.map(v => Math.exp((v - maxV) * 1.2)); // temperature 1/1.2
-        const sum  = exps.reduce((a,b) => a+b, 0);
-        const probs = exps.map(v => v / sum);
+        /* ── F boost (middle/ring/pinky up + pinch) ── */
+        if(mE&&rE&&pE&&ti<0.4){s['F']+=4;s['O']-=3;}
 
-        const best = probs.reduce((bi,v,i) => v > probs[bi] ? i : bi, 0);
-        return {
-            letter: STATIC_LABELS[best],
-            confidence: probs[best],
-            allProbs: Object.fromEntries(STATIC_LABELS.map((l,i) => [l, probs[i]]))
-        };
+        /* ── L: thumb+index L-shape ── */
+        if(iE&&!mE&&!rE&&!pE&&tEx&&iUp){s['L']+=4;}
+
+        return smResult(s,LETTERS);
     }
 
-    /* ════════════════════════════════════════════════════════════════
-       J & Z MOTION DETECTION
-       Tracks fingertip trajectory over recent frames and matches
-       against canonical motion patterns using DTW-inspired scoring.
-       ════════════════════════════════════════════════════════════════ */
+    /* ══════════════════════════════════════════════════════════════════
+       NUMBER CLASSIFIER  (unchanged — raw landmarks)
+    ══════════════════════════════════════════════════════════════════ */
+    var NUMBERS=['0','1','2','3','4','5','6','7','8','9'];
 
-    const TRAIL_LEN = 30;
-    let indexTrail = [];  // normalized positions of lm[8]
-    let pinkyTrail  = [];  // normalized positions of lm[20]
-    let motionCooldown = 0; // frames to wait after a motion letter
-
-    function pushTrail(lm) {
-        const wx=lm[0].x, wy=lm[0].y;
-        const ps=Math.hypot(lm[9].x-wx, lm[9].y-wy) || 0.01;
-        indexTrail.push({ x:(lm[8].x-wx)/ps,  y:(lm[8].y-wy)/ps });
-        pinkyTrail.push({ x:(lm[20].x-wx)/ps, y:(lm[20].y-wy)/ps });
-        if(indexTrail.length > TRAIL_LEN) { indexTrail.shift(); pinkyTrail.shift(); }
+    function classifyNumber(lm){
+        var n=normLM(lm);
+        var iE=ext(n,8,6,5),mE=ext(n,12,10,9),rE=ext(n,16,14,13),pE=ext(n,20,18,17);
+        var iEL=ext(n,8,6,5,.1),mEL=ext(n,12,10,9,.1);
+        var ic=n[8].y-n[5].y,mc=n[12].y-n[9].y,rc=n[16].y-n[13].y;
+        var ti=d3(n,4,8),tm=d3(n,4,12),tr=d3(n,4,16),tp=d3(n,4,20);
+        var im=d3(n,8,12),mr=d3(n,12,16),rp=d3(n,16,20);
+        var tAbs=Math.abs(n[4].x-n[2].x),tEx=tAbs>0.30;
+        var iDy=n[8].y-n[5].y,iDx=n[8].x-n[5].x;
+        var iAng=Math.atan2(iDy,iDx),iUp=iAng<-1.0;
+        var iHk=n[8].y>n[5].y&&n[8].y<n[6].y+0.3;
+        var ac=!iE&&!mE&&!rE&&!pE;
+        var s={};
+        s['0']=(ti<0.38?8:(ti<0.5?3:-4))+(!iE&&!mE&&!rE?4:-3)+(tm<0.65?3:0)+(im<0.45&&mr<0.5?2:0)+(Math.abs(n[8].y-n[4].y)<0.55?2:0);
+        s['1']=(iE?6:-6)+(!mE&&!rE&&!pE?7:-3*[mE,rE,pE].filter(Boolean).length)+(iUp?4:0)+(!tEx?2:0)+(n[8].y<-0.5?2:0);
+        s['2']=((iE&&mE)?6:-5)+(!rE&&!pE?4:-2)+(im>0.30?5:(im>0.22?2:-3))+(iUp&&n[12].y<n[9].y-0.2?3:0)+(!tEx?1:0);
+        s['3']=((iE&&mE&&rE)?8:-5)+(!pE?3:-2)+(!tEx?2:0)+(im>0.15&&mr>0.15?2:0)+(n[8].y<n[5].y&&n[12].y<n[9].y&&n[16].y<n[13].y?3:0)+(tAbs<0.45?2:0);
+        s['4']=((iE&&mE&&rE&&pE)?9:-7)+(!tEx?4:-4)+(im>0.12&&mr>0.12&&rp>0.12?2:0)+(tAbs<0.35?2:0)+(ti>0.6?1:0);
+        s['5']=((iE&&mE&&rE&&pE)?7:-6)+(tEx?4:-3)+(im>0.3&&mr>0.25&&rp>0.25?4:0)+(tAbs>0.4?3:0)+(tp>1.2?2:0);
+        s['6']=((mE&&rE&&pE)?5:-4)+(!iE?2:0)+(tp<0.35?5:(tp<0.5?2:-2))+(iEL&&tp<0.4?2:0);
+        s['7']=((iE&&mE&&rE)?5:-4)+(!pE?2:0)+(tr<0.38?5:(tr<0.55?2:-2));
+        s['8']=((iE&&mE)?4:-4)+(!rE&&!pE?3:-2)+(tm<0.32?6:(tm<0.48?3:-3));
+        s['9']=(iHk||!iE?3:0)+(!mE&&!rE&&!pE?3:0)+(ti<0.35?6:(ti<0.5?3:-3))+(ic>0&&ic<0.5?2:0);
+        if(ti<0.35&&(iHk||!iEL)){s['9']+=3;s['0']-=2;}
+        else if(ti<0.38&&iEL){s['0']+=2;s['9']-=1;}
+        if(iE&&mE&&im>0.28&&!rE){s['2']+=3;s['1']-=3;}
+        if(iE&&!mE){s['1']+=3;s['2']-=3;}
+        if(iE&&mE&&rE&&pE){if(tEx&&tAbs>0.4){s['5']+=3;s['4']-=2;}else{s['4']+=2;s['5']-=1;}}
+        if(tp<0.38&&pE){s['6']+=3;s['9']-=2;}
+        if(ti<0.35&&!pE){s['9']+=2;s['6']-=2;}
+        if(iE&&mE&&rE&&!pE){if(tr<0.45){s['7']+=3;s['3']-=2;}else{s['3']+=2;s['7']-=1;}}
+        if(iE&&mE&&!rE&&!pE){if(tm<0.4){s['8']+=3;s['2']-=2;}else{s['2']+=2;s['8']-=1;}}
+        return smResult(s,NUMBERS);
     }
 
-    function trailMotion(trail) {
-        let d = 0;
-        for(let i=1;i<trail.length;i++)
-            d += Math.hypot(trail[i].x-trail[i-1].x, trail[i].y-trail[i-1].y);
-        return d;
+    /* ══════════════════════════════════════════════════════════════════
+       J & Z MOTION DETECTION  (unchanged)
+    ══════════════════════════════════════════════════════════════════ */
+    var TRAIL_LEN=30,idxTrail=[],pkTrail=[],motCD=0;
+    function pushTrail(lm){
+        var wx=lm[0].x,wy=lm[0].y,ps=Math.hypot(lm[9].x-wx,lm[9].y-wy)||0.01;
+        idxTrail.push({x:(lm[8].x-wx)/ps,y:(lm[8].y-wy)/ps});
+        pkTrail.push({x:(lm[20].x-wx)/ps,y:(lm[20].y-wy)/ps});
+        if(idxTrail.length>TRAIL_LEN){idxTrail.shift();pkTrail.shift();}
+    }
+    function trailDist(t){var d=0;for(var i=1;i<t.length;i++)d+=Math.hypot(t[i].x-t[i-1].x,t[i].y-t[i-1].y);return d;}
+    function detectJ(lm){
+        if(motCD>0)return false;
+        var n=normLM(lm);
+        if(!(!ext(n,8,6,5)&&!ext(n,12,10,9)&&!ext(n,16,14,13)&&ext(n,20,18,17)))return false;
+        if(pkTrail.length<18||trailDist(pkTrail)<0.55)return false;
+        var h=Math.floor(pkTrail.length*0.55),s1=pkTrail.slice(0,h),s2=pkTrail.slice(h);
+        var dy1=s1[s1.length-1].y-s1[0].y,dx2=s2[s2.length-1].x-s2[0].x,dy2=Math.abs(s2[s2.length-1].y-s2[0].y);
+        return dy1>0.22&&Math.abs(dx2)>0.18&&dy2<0.25;
+    }
+    function detectZ(lm){
+        if(motCD>0)return false;
+        var n=normLM(lm);
+        if(!(ext(n,8,6,5)&&!ext(n,12,10,9)&&!ext(n,16,14,13)&&!ext(n,20,18,17)))return false;
+        if(idxTrail.length<20||trailDist(idxTrail)<0.7)return false;
+        var nl=idxTrail.length;
+        var t1=idxTrail.slice(0,Math.floor(nl*.33)),t2=idxTrail.slice(Math.floor(nl*.33),Math.floor(nl*.66)),t3=idxTrail.slice(Math.floor(nl*.66));
+        if(t1.length<3||t2.length<3||t3.length<3)return false;
+        var dx1=t1[t1.length-1].x-t1[0].x,dx2=t2[t2.length-1].x-t2[0].x,dy2=t2[t2.length-1].y-t2[0].y,dx3=t3[t3.length-1].x-t3[0].x;
+        return Math.abs(dx1)>0.15&&Math.abs(dx2)>0.12&&dy2>0.1&&Math.abs(dx3)>0.12&&Math.sign(dx1)!==Math.sign(dx2)&&Math.sign(dx3)===Math.sign(dx1);
     }
 
-    // J: pinky-up posture (I-shape), traces a J curve:
-    //    movement starts downward, then hooks inward (left for right hand)
-    function detectJ(lm) {
-        if (motionCooldown > 0) return false;
-        const f = { index: (lm[5].y - lm[8].y) > 0.02, middle: (lm[9].y - lm[12].y) > 0.02,
-            ring: (lm[13].y - lm[16].y) > 0.02, pinky: (lm[17].y - lm[20].y) > 0.02 };
-        if (!f.pinky || f.index || f.middle || f.ring) return false; // must be I-shape
-        if (pinkyTrail.length < 18) return false;
-        if (trailMotion(pinkyTrail) < 0.55) return false;
-
-        const half = Math.floor(pinkyTrail.length * 0.55);
-        const seg1 = pinkyTrail.slice(0, half);
-        const seg2 = pinkyTrail.slice(half);
-
-        const dy1 = seg1[seg1.length-1].y - seg1[0].y; // positive = downward
-        const dx2 = seg2[seg2.length-1].x - seg2[0].x; // hook left or right
-        const dy2 = Math.abs(seg2[seg2.length-1].y - seg2[0].y);
-
-        return dy1 > 0.22 && Math.abs(dx2) > 0.18 && dy2 < 0.25;
-    }
-
-    // Z: index-up posture (D-shape), traces Z:
-    //    right stroke → diagonal down-left → right stroke
-    function detectZ(lm) {
-        if (motionCooldown > 0) return false;
-        const f = { index: (lm[5].y - lm[8].y) > 0.02, middle: (lm[9].y - lm[12].y) > 0.02,
-            ring: (lm[13].y - lm[16].y) > 0.02, pinky: (lm[17].y - lm[20].y) > 0.02 };
-        if (!f.index || f.middle || f.ring || f.pinky) return false; // index-up only
-        if (indexTrail.length < 20) return false;
-        if (trailMotion(indexTrail) < 0.7) return false;
-
-        const n = indexTrail.length;
-        const t1 = indexTrail.slice(0, Math.floor(n*0.33));
-        const t2 = indexTrail.slice(Math.floor(n*0.33), Math.floor(n*0.66));
-        const t3 = indexTrail.slice(Math.floor(n*0.66));
-
-        if (t1.length < 3 || t2.length < 3 || t3.length < 3) return false;
-
-        const dx1 = t1[t1.length-1].x - t1[0].x; // first horizontal
-        const dx2 = t2[t2.length-1].x - t2[0].x; // diagonal
-        const dy2 = t2[t2.length-1].y - t2[0].y; // diagonal downward
-        const dx3 = t3[t3.length-1].x - t3[0].x; // last horizontal
-
-        // Z: right → down-left → right (signs vary by handedness, accept both)
-        const match1 = Math.abs(dx1) > 0.15 && Math.abs(dx2) > 0.12 && dy2 > 0.1 && Math.abs(dx3) > 0.12;
-        const sameDir1 = Math.sign(dx1) !== Math.sign(dx2) && Math.sign(dx3) === Math.sign(dx1);
-
-        return match1 && sameDir1;
-    }
-
-    /* ════════════════════════════════════════════════════════════════
-       TRAIL VISUALIZER (draws motion path on canvas)
-       ════════════════════════════════════════════════════════════════ */
-
-    function drawTrail(trailCanvas, trail, color, videoW, videoH) {
-        if (trail.length < 2) return;
-        const tc = trailCanvas.getContext('2d');
-        const wx = 0, wy = 0; // already normalized around wrist
-
-        // Convert back to pixel coords
-        // We stored wrist-relative normalized coords; need to project back
-        // We'll draw on a transparent overlay using screenspace coords
-        // stored as normalized 0-1 of video frame
-    }
-
-    /* ════════════════════════════════════════════════════════════════
-       HOLD LOGIC (1200ms steady hold → commit static letter)
-       ════════════════════════════════════════════════════════════════ */
-
-    const HOLD_MS = 1200;
-    let holdCandidate = null, holdStart = null;
-
-    function updateHold(letter, isMotion) {
-        const arc = document.getElementById('holdArc');
-        const lbl = document.getElementById('holdLabel');
-        const C = 113;
-
-        if (isMotion) {
-            commitLetter(letter, true);
-            motionCooldown = 25; // suppress re-detection for ~25 frames
-            indexTrail = []; pinkyTrail = [];
-            holdCandidate = null; holdStart = null;
-            arc.style.strokeDashoffset = 0;
-            lbl.innerHTML = '✓';
-            setTimeout(() => { arc.style.strokeDashoffset = C; lbl.innerHTML = 'hold<br>sign'; }, 700);
+    /* ══════════════════════════════════════════════════════════════════
+       HOLD LOGIC
+    ══════════════════════════════════════════════════════════════════ */
+    var HOLD_MS=1200,holdCand=null,holdStart=null;
+    function updateHold(label,isMotion,isNum){
+        var arc=document.getElementById('holdArc'),lbl=document.getElementById('holdLabel'),C=113;
+        if(isMotion){
+            commitSign(label,'mot');motCD=25;idxTrail=[];pkTrail=[];
+            holdCand=null;holdStart=null;
+            arc.style.strokeDashoffset=0;lbl.innerHTML='✓';
+            setTimeout(function(){arc.style.strokeDashoffset=C;lbl.innerHTML='hold<br>sign';},700);
             return;
         }
-
-        if (!letter) { holdCandidate = null; holdStart = null; arc.style.strokeDashoffset = C; lbl.innerHTML = 'hold<br>sign'; return; }
-
-        if (letter !== holdCandidate) { holdCandidate = letter; holdStart = Date.now(); }
-
-        const elapsed = Date.now() - holdStart;
-        const progress = Math.min(elapsed / HOLD_MS, 1);
-        arc.style.strokeDashoffset = C * (1 - progress);
-
-        if (progress >= 1) {
-            commitLetter(letter, false);
-            holdCandidate = null; holdStart = null;
-            arc.style.strokeDashoffset = C;
-            lbl.innerHTML = '✓';
-            setTimeout(() => { lbl.innerHTML = 'hold<br>sign'; }, 600);
+        if(!label){holdCand=null;holdStart=null;arc.style.strokeDashoffset=C;lbl.innerHTML='hold<br>sign';return;}
+        if(label!==holdCand){holdCand=label;holdStart=Date.now();}
+        var prog=Math.min((Date.now()-holdStart)/HOLD_MS,1);
+        arc.style.strokeDashoffset=C*(1-prog);
+        if(prog>=1){
+            commitSign(label,isNum?'num':'let');holdCand=null;holdStart=null;
+            arc.style.strokeDashoffset=C;lbl.innerHTML='✓';
+            setTimeout(function(){lbl.innerHTML='hold<br>sign';},600);
         }
     }
 
-    /* ════════════════════════════════════════════════════════════════
+    /* ══════════════════════════════════════════════════════════════════
        UI
-       ════════════════════════════════════════════════════════════════ */
-
-    let sentence = '', lettersAdded = 0;
-
-    function commitLetter(ch, isMotion) {
-        sentence += ch; lettersAdded++;
-        document.getElementById('lettersAdded').textContent = lettersAdded;
-        document.getElementById('sentenceText').textContent = sentence;
-        addHistoryChip(ch, isMotion);
+    ══════════════════════════════════════════════════════════════════ */
+    var sentence='',signsN=0;
+    function commitSign(ch,type){
+        sentence+=ch;signsN++;
+        document.getElementById('signsAdded').textContent=signsN;
+        document.getElementById('sentenceText').textContent=sentence;
+        addChip(ch,type);
     }
-    function addSpace() {
-        if (sentence.length && sentence[sentence.length-1] !== ' ') {
-            sentence += ' ';
-            document.getElementById('sentenceText').textContent = sentence;
-            addHistoryChip('␣', false, true);
-        }
+    function addSpace(){if(sentence.length&&sentence[sentence.length-1]!==' '){sentence+=' ';document.getElementById('sentenceText').textContent=sentence;addChip('␣','space');}}
+    function deleteChar(){if(sentence.length){sentence=sentence.slice(0,-1);document.getElementById('sentenceText').textContent=sentence;}}
+    function clearSentence(){sentence='';document.getElementById('sentenceText').textContent='';document.getElementById('historyRow').innerHTML='';}
+    function copySentence(){if(sentence)navigator.clipboard.writeText(sentence).catch(function(){});}
+    function addChip(ch,type){
+        var row=document.getElementById('historyRow'),chip=document.createElement('span');
+        chip.className='chip'+(type==='mot'?' mot':(type==='num'?' num':(type==='space'?' space':'')));
+        chip.textContent=ch;row.appendChild(chip);
+        while(row.children.length>24)row.removeChild(row.firstChild);
     }
-    function deleteChar() { if(sentence.length){ sentence=sentence.slice(0,-1); document.getElementById('sentenceText').textContent=sentence; } }
-    function clearSentence() { sentence=''; document.getElementById('sentenceText').textContent=''; document.getElementById('historyRow').innerHTML=''; }
-    function copySentence() { if(sentence) navigator.clipboard.writeText(sentence).catch(()=>{}); }
+    function setStatus(msg,active){var el=document.getElementById('statusMsg');el.textContent=msg;el.className=active?'active':'';}
 
-    function addHistoryChip(ch, isMotion, isSpace=false) {
-        const row = document.getElementById('historyRow');
-        const chip = document.createElement('span');
-        chip.className = 'hist-chip' + (isMotion?' motion-chip':'') + (isSpace?' word-chip':'');
-        chip.textContent = ch;
-        row.appendChild(chip);
-        while(row.children.length > 24) row.removeChild(row.firstChild);
-    }
-
-    function setStatus(msg, active=false) {
-        const el = document.getElementById('statusMsg');
-        el.textContent = msg; el.className = active?'active':'';
+    /* Mode toggle */
+    var curMode='letters';
+    function toggleMode(){
+        curMode=curMode==='letters'?'numbers':'letters';
+        var btn=document.getElementById('modeBtn'),pill=document.getElementById('modePill');
+        if(curMode==='numbers'){btn.textContent='Mode: Numbers';btn.classList.add('mode-num');pill.textContent='NUMBERS';pill.className='mode-pill num';}
+        else{btn.textContent='Mode: Letters';btn.classList.remove('mode-num');pill.textContent='LETTERS';pill.className='mode-pill let';}
+        holdCand=null;holdStart=null;
     }
 
-    // Build gesture guide
-    (function() {
-        const gestures = [
+    /* Reference grid */
+    (function(){
+        var items=[
             {l:'A'},{l:'B'},{l:'C'},{l:'D'},{l:'E'},{l:'F'},
-            {l:'G'},{l:'H'},{l:'I'},{l:'J',motion:true},{l:'K'},{l:'L'},
+            {l:'G'},{l:'H'},{l:'I'},{l:'J',mot:true},{l:'K'},{l:'L'},
             {l:'M'},{l:'N'},{l:'O'},{l:'P'},{l:'Q'},{l:'R'},
             {l:'S'},{l:'T'},{l:'U'},{l:'V'},{l:'W'},{l:'X'},
-            {l:'Y'},{l:'Z',motion:true}
+            {l:'Y'},{l:'Z',mot:true},
+            {l:'0',num:true},{l:'1',num:true},{l:'2',num:true},{l:'3',num:true},
+            {l:'4',num:true},{l:'5',num:true},{l:'6',num:true},{l:'7',num:true},
+            {l:'8',num:true},{l:'9',num:true}
         ];
-        const el = document.getElementById('gestureGuide');
-        gestures.forEach(g => {
-            const cell = document.createElement('div');
-            cell.className = 'gesture-cell' + (g.motion?' motion-cell':'');
-            cell.id = 'gc-'+g.l;
-            cell.innerHTML = `<div class="gesture-letter">${g.l}</div><div class="gesture-desc">${g.motion?'★ motion':'static'}</div>`;
-            el.appendChild(cell);
+        var g=document.getElementById('refGrid');
+        items.forEach(function(it){
+            var c=document.createElement('div');
+            c.className='ref-cell'+(it.mot?' mot-cell':'')+(it.num?' num-cell':'');
+            c.id='gc-'+it.l;
+            c.innerHTML='<div class="ref-letter">'+it.l+'</div><div class="ref-desc">'+(it.mot?'★ motion':(it.num?'◆ number':'static'))+'</div>';
+            g.appendChild(c);
         });
     })();
 
-    function highlightGuide(letter) {
-        document.querySelectorAll('.gesture-cell').forEach(c=>c.classList.remove('active'));
-        if(letter){ const el=document.getElementById('gc-'+letter); if(el) el.classList.add('active'); }
+    function highlightRef(lbl){
+        document.querySelectorAll('.ref-cell').forEach(function(c){c.classList.remove('active');});
+        if(lbl){var el=document.getElementById('gc-'+lbl);if(el)el.classList.add('active');}
     }
 
-    // Mark model ready on load
-    document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('modelBadge').textContent = '✓ classifier ready';
-        document.getElementById('modelBadge').classList.add('ready');
+    document.addEventListener('DOMContentLoaded',function(){
+        document.getElementById('modelBadge').textContent='⟳ loading tf.js…';
     });
 
-    /* ════════════════════════════════════════════════════════════════
-       MEDIAPIPE INTEGRATION
-       ════════════════════════════════════════════════════════════════ */
+    /* ══════════════════════════════════════════════════════════════════
+       MEDIAPIPE-COMPATIBLE CONSTANTS (same landmark indices)
+    ══════════════════════════════════════════════════════════════════ */
+    var CONN=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+    var TIPS=[4,8,12,16,20];
 
-    const HAND_CONNECTIONS=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
-    const FINGER_TIPS=[4,8,12,16,20];
+    /* ══════════════════════════════════════════════════════════════════
+       CAMERA & INFERENCE  (TF.js handpose)
+    ══════════════════════════════════════════════════════════════════ */
+    var stream=null, animF=null, tfModel=null;
+    var vid=null, ov=null, octx=null, tc=null, tctx=null, scrTrail=[];
 
-    let stream=null, animFrame=null, handsModel=null;
-    const video  = document.getElementById('video');
-    const canvas = document.getElementById('overlay');
-    const ctx    = canvas.getContext('2d');
-    const trailCanvas = document.getElementById('trailCanvas');
-    const tCtx   = trailCanvas.getContext('2d');
+    async function startCamera(){
+        vid=document.getElementById('video');
+        ov=document.getElementById('overlay'); octx=ov.getContext('2d');
+        tc=document.getElementById('trailCanvas'); tctx=tc.getContext('2d');
 
-    // Store screen-space trail for visualization
-    let screenTrail = [];
-
-    async function startCamera() {
+        setStatus('Requesting camera…');
         try {
-            setStatus('Requesting camera…');
-            stream = await navigator.mediaDevices.getUserMedia({ video:{width:640,height:480} });
-            video.srcObject = stream;
-            await new Promise(r => video.onloadedmetadata = r);
-            canvas.width = trailCanvas.width = video.videoWidth;
-            canvas.height = trailCanvas.height = video.videoHeight;
+            stream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480}});
+            vid.srcObject=stream;
+            await new Promise(function(r){vid.onloadedmetadata=r;});
+            ov.width=tc.width=vid.videoWidth;
+            ov.height=tc.height=vid.videoHeight;
             document.getElementById('startBtn').style.display='none';
             document.getElementById('stopBtn').style.display='';
-            setStatus('Loading hand model…');
-            handsModel = new Hands({ locateFile: f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
-            handsModel.setOptions({ maxNumHands:1, modelComplexity:1, minDetectionConfidence:0.72, minTrackingConfidence:0.62 });
-            handsModel.onResults(onResults);
-            await handsModel.initialize();
-            setStatus('Tracking…', true);
-            processLoop();
-        } catch(e) { setStatus('Error: '+e.message); }
+            document.getElementById('modeBtn').style.display='';
+
+            setStatus('Loading TF.js handpose model…');
+            document.getElementById('modelBadge').textContent='⟳ loading model…';
+            document.getElementById('modelBadge').className='badge badge-loading';
+
+            /* Load TF.js handpose model */
+            tfModel=await handpose.load({
+                detectionConfidence:0.8,
+                maxContinuousChecks:5,
+                iouThreshold:0.3,
+                scoreThreshold:0.75
+            });
+
+            /* Setup fingerpose gesture estimator */
+            setupFingerpose();
+
+            document.getElementById('modelBadge').textContent='✓ fingerpose ready';
+            document.getElementById('modelBadge').className='badge badge-ready';
+            setStatus('Tracking…',true);
+            loop();
+        } catch(e){ setStatus('Error: '+e.message); }
     }
 
-    function stopCamera() {
-        if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
-        if(animFrame){ cancelAnimationFrame(animFrame); animFrame=null; }
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        tCtx.clearRect(0,0,trailCanvas.width,trailCanvas.height);
-        video.srcObject=null;
+    function stopCamera(){
+        if(stream){stream.getTracks().forEach(function(t){t.stop();});stream=null;}
+        if(animF){cancelAnimationFrame(animF);animF=null;}
+        if(octx)octx.clearRect(0,0,ov.width,ov.height);
+        if(tctx)tctx.clearRect(0,0,tc.width,tc.height);
+        if(vid)vid.srcObject=null;
         document.getElementById('startBtn').style.display='';
         document.getElementById('stopBtn').style.display='none';
-        ['handCount','currentSign'].forEach(id=>document.getElementById(id).textContent='—');
+        document.getElementById('modeBtn').style.display='none';
+        ['handCount','currentSign'].forEach(function(id){document.getElementById(id).textContent='—';});
         document.getElementById('detectLetter').textContent='—';
         document.getElementById('detectLabel').textContent='stopped';
         document.getElementById('confFill').style.width='0%';
         document.getElementById('confPct').textContent='—';
-        document.getElementById('motionIndicator').style.display='none';
-        updateHold(null,false); highlightGuide(null);
-        indexTrail=[]; pinkyTrail=[]; screenTrail=[];
-        setStatus('Camera off');
+        document.getElementById('motBadge').style.display='none';
+        updateHold(null,false,false);highlightRef(null);
+        idxTrail=[];pkTrail=[];scrTrail=[];setStatus('Camera off');
     }
 
-    async function processLoop() {
-        if(!stream) return;
-        if(video.readyState>=2) await handsModel.send({image:video});
-        animFrame = requestAnimationFrame(processLoop);
+    async function loop(){
+        if(!stream)return;
+        if(vid&&vid.readyState>=2){
+            try{
+                var preds=await tfModel.estimateHands(vid);
+                onResults(preds);
+            } catch(e){}
+        }
+        if(stream) animF=requestAnimationFrame(loop);
     }
 
-    function onResults(results) {
-        canvas.width = trailCanvas.width = video.videoWidth;
-        canvas.height = trailCanvas.height = video.videoHeight;
-        ctx.clearRect(0,0,canvas.width,canvas.height);
+    function onResults(preds){
+        ov.width=tc.width=vid.videoWidth;
+        ov.height=tc.height=vid.videoHeight;
+        octx.clearRect(0,0,ov.width,ov.height);
+        if(motCD>0)motCD--;
 
-        if (motionCooldown > 0) motionCooldown--;
+        var det=preds.length;
+        document.getElementById('handCount').textContent=det;
+        var mb=document.getElementById('motBadge');
 
-        const detected = results.multiHandLandmarks ? results.multiHandLandmarks.length : 0;
-        document.getElementById('handCount').textContent = detected;
-        const motionEl = document.getElementById('motionIndicator');
-
-        if (!detected) {
+        if(!det){
             document.getElementById('detectLetter').textContent='—';
             document.getElementById('detectLabel').textContent='no hand in frame';
             document.getElementById('confFill').style.width='0%';
             document.getElementById('confPct').textContent='—';
             document.getElementById('currentSign').textContent='—';
-            motionEl.style.display='none';
-            updateHold(null,false); highlightGuide(null);
-            indexTrail=[]; pinkyTrail=[]; screenTrail=[];
-            tCtx.clearRect(0,0,trailCanvas.width,trailCanvas.height);
+            mb.style.display='none';
+            updateHold(null,false,false);highlightRef(null);
+            idxTrail=[];pkTrail=[];scrTrail=[];
+            tctx.clearRect(0,0,tc.width,tc.height);
+            document.getElementById('topScores').innerHTML='—';
+            document.getElementById('debugInfo').textContent='';
             return;
         }
 
-        const lm = results.multiHandLandmarks[0];
+        /* TF.js handpose: landmarks = [[x,y,z], ...] in pixel coords */
+        var tfLM=preds[0].landmarks;
 
-        // Draw skeleton
-        HAND_CONNECTIONS.forEach(([a,b]) => {
-            ctx.beginPath();
-            ctx.moveTo(lm[a].x*canvas.width, lm[a].y*canvas.height);
-            ctx.lineTo(lm[b].x*canvas.width, lm[b].y*canvas.height);
-            ctx.strokeStyle='rgba(124,255,212,0.45)'; ctx.lineWidth=2; ctx.stroke();
+        /* Adapt to [{x,y,z}] normalised for our geometry functions */
+        var lm=adaptLM(tfLM,ov.width,ov.height);
+
+        /* Draw skeleton */
+        CONN.forEach(function(p){
+            octx.beginPath();
+            octx.moveTo(tfLM[p[0]][0],tfLM[p[0]][1]);
+            octx.lineTo(tfLM[p[1]][0],tfLM[p[1]][1]);
+            octx.strokeStyle='rgba(124,255,212,.45)';octx.lineWidth=2;octx.stroke();
         });
-        lm.forEach((p,idx) => {
-            const x=p.x*canvas.width, y=p.y*canvas.height;
-            const isTip=FINGER_TIPS.includes(idx);
-            ctx.beginPath(); ctx.arc(x,y,isTip?7:4,0,2*Math.PI);
-            ctx.fillStyle=isTip?'rgba(255,209,102,0.95)':'rgba(200,210,255,0.85)';
-            ctx.fill(); ctx.strokeStyle=isTip?'rgba(220,140,0,0.8)':'rgba(124,255,212,0.5)';
-            ctx.lineWidth=1.5; ctx.stroke();
+        tfLM.forEach(function(p,i){
+            var tip=TIPS.indexOf(i)>=0;
+            octx.beginPath();octx.arc(p[0],p[1],tip?7:4,0,2*Math.PI);
+            octx.fillStyle=tip?'rgba(255,209,102,.95)':'rgba(200,210,255,.85)';octx.fill();
+            octx.strokeStyle=tip?'rgba(220,140,0,.8)':'rgba(124,255,212,.5)';
+            octx.lineWidth=1.5;octx.stroke();
         });
 
-        // Store screen trail for index tip
-        screenTrail.push({ x: lm[8].x * canvas.width, y: lm[8].y * canvas.height });
-        if(screenTrail.length > TRAIL_LEN) screenTrail.shift();
-
-        // Draw motion trail
-        tCtx.clearRect(0,0,trailCanvas.width,trailCanvas.height);
-        if(screenTrail.length > 2) {
-            tCtx.beginPath();
-            tCtx.moveTo(screenTrail[0].x, screenTrail[0].y);
-            for(let i=1;i<screenTrail.length;i++){
-                const alpha = i/screenTrail.length;
-                tCtx.strokeStyle=`rgba(255,209,102,${alpha*0.7})`;
-                tCtx.lineWidth = alpha * 2.5 + 0.5;
-                tCtx.beginPath();
-                tCtx.moveTo(screenTrail[i-1].x, screenTrail[i-1].y);
-                tCtx.lineTo(screenTrail[i].x, screenTrail[i].y);
-                tCtx.stroke();
-            }
+        /* Screen trail */
+        scrTrail.push({x:tfLM[8][0],y:tfLM[8][1]});
+        if(scrTrail.length>TRAIL_LEN)scrTrail.shift();
+        tctx.clearRect(0,0,tc.width,tc.height);
+        for(var i=1;i<scrTrail.length;i++){
+            var a=i/scrTrail.length;
+            tctx.strokeStyle='rgba(255,209,102,'+(a*.7)+')';tctx.lineWidth=a*2.5+.5;
+            tctx.beginPath();tctx.moveTo(scrTrail[i-1].x,scrTrail[i-1].y);tctx.lineTo(scrTrail[i].x,scrTrail[i].y);tctx.stroke();
         }
 
-        // Update motion trails
         pushTrail(lm);
 
-        // Check motion letters first
-        const isJ = detectJ(lm);
-        const isZ = detectZ(lm);
-
-        if (isJ || isZ) {
-            const ml = isJ ? 'J' : 'Z';
-            motionEl.style.display = 'block';
-            motionEl.textContent = `✦ ${ml} motion`;
-            const dlEl = document.getElementById('detectLetter');
-            dlEl.textContent = ml;
-            dlEl.className = 'detect-letter motion-letter';
-            document.getElementById('detectLabel').textContent = `ASL: "${ml}" (motion sign)`;
-            document.getElementById('confFill').style.width = '92%';
-            document.getElementById('confPct').textContent = 'motion';
-            document.getElementById('currentSign').textContent = ml;
-            highlightGuide(ml);
-            updateHold(ml, true);
-            return;
+        /* Motion detection */
+        if(curMode==='letters'){
+            var isJ=detectJ(lm),isZ=detectZ(lm);
+            if(isJ||isZ){
+                var ml=isJ?'J':'Z';
+                mb.style.display='block';mb.textContent='✦ '+ml+' motion';
+                var dl=document.getElementById('detectLetter');dl.textContent=ml;dl.className='detect-letter mot';
+                document.getElementById('detectLabel').textContent='ASL: "'+ml+'" (motion)';
+                document.getElementById('confFill').style.width='92%';document.getElementById('confFill').className='conf-fill';
+                document.getElementById('confPct').textContent='motion';document.getElementById('currentSign').textContent=ml;
+                highlightRef(ml);updateHold(ml,true,false);return;
+            }
         }
+        mb.style.display='none';
 
-        motionEl.style.display = 'none';
+        var res2=curMode==='numbers'?classifyNumber(lm):classifyLetter(tfLM,lm);
+        var isN=curMode==='numbers',pct=Math.round(res2.confidence*100);
+        var dl=document.getElementById('detectLetter');
+        dl.textContent=res2.label||'?';dl.className='detect-letter'+(isN?' num':'');
+        document.getElementById('detectLabel').textContent=res2.label?(isN?'Number: '+res2.label:'ASL: "'+res2.label+'"'):'uncertain';
+        document.getElementById('confFill').style.width=pct+'%';document.getElementById('confFill').className='conf-fill'+(isN?' num':'');
+        document.getElementById('confPct').textContent=pct+'%';document.getElementById('currentSign').textContent=res2.label||'—';
 
-        // Static classification
-        const { letter, confidence } = classifyLandmarks(lm);
-        const pct = Math.round(confidence * 100);
+        document.getElementById('topScores').innerHTML=res2.top.map(function(sc,i){
+            return '<span class="sc'+(i===0?(isN?' best-num':' best'):'')+'">'+ sc.l+': '+sc.s+' ('+sc.p+'%)</span>';
+        }).join('');
+        document.getElementById('debugInfo').textContent='fingerpose + landmarks · mode: '+curMode;
 
-        const dlEl = document.getElementById('detectLetter');
-        dlEl.textContent = letter || '?';
-        dlEl.className = 'detect-letter';
-        document.getElementById('detectLabel').textContent = letter ? `ASL: "${letter}"` : 'uncertain';
-        document.getElementById('confFill').style.width = pct + '%';
-        document.getElementById('confPct').textContent = pct + '%';
-        document.getElementById('currentSign').textContent = letter || '—';
-
-        highlightGuide(letter);
-        updateHold(confidence > 0.32 ? letter : null, false);
+        highlightRef(res2.label);
+        updateHold(res2.confidence>0.28?res2.label:null,false,isN);
     }
 </script>
 </body>
