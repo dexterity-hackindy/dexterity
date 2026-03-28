@@ -145,7 +145,6 @@
             filterLabel?'Label: '+filterLabel+' ('+rows.length+' samples)':'All samples ('+rows.length+')';
         var g=document.getElementById('samplesGrid');
         if(!rows.length){g.innerHTML='<div class="empty">No samples'+(filterLabel?' for '+filterLabel:'')+'.</div>';return;}
-        /* Sort newest first */
         rows=rows.slice().sort(function(a,b){return b.ts-a.ts;});
         g.innerHTML='';
         rows.forEach(function(r){
@@ -162,21 +161,28 @@
         });
     }
 
+    /* Landmarks are stored as [{x,y,z}] objects from MediaPipe.
+       We access .x and .y (NOT [0] and [1] — that was the old bug). */
     function drawHand(canvas,lm){
         if(!lm||lm.length<21)return;
         var ctx=canvas.getContext('2d');
         var W=canvas.width,H=canvas.height;
         ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-        /* Compute bounding box of lm for fitting into canvas */
-        var xs=lm.map(function(p){return p[0];}),ys=lm.map(function(p){return p[1];});
+
+        /* Get x/y from {x,y,z} objects */
+        var xs=lm.map(function(p){return p.x;}),ys=lm.map(function(p){return p.y;});
         var minX=Math.min.apply(null,xs),maxX=Math.max.apply(null,xs);
         var minY=Math.min.apply(null,ys),maxY=Math.max.apply(null,ys);
         var rangeX=maxX-minX||1,rangeY=maxY-minY||1;
         var pad=14;
-        function px(p){return pad+(p[0]-minX)/rangeX*(W-pad*2);}
-        function py(p){return pad+(p[1]-minY)/rangeY*(H-pad*2);}
+
+        function px(p){return pad+(p.x-minX)/rangeX*(W-pad*2);}
+        function py(p){return pad+(p.y-minY)/rangeY*(H-pad*2);}
+
         CONN.forEach(function(c){
-            ctx.beginPath();ctx.moveTo(px(lm[c[0]]),py(lm[c[0]]));ctx.lineTo(px(lm[c[1]]),py(lm[c[1]]));
+            ctx.beginPath();
+            ctx.moveTo(px(lm[c[0]]),py(lm[c[0]]));
+            ctx.lineTo(px(lm[c[1]]),py(lm[c[1]]));
             ctx.strokeStyle='rgba(124,255,212,.5)';ctx.lineWidth=1.5;ctx.stroke();
         });
         lm.forEach(function(p,i){

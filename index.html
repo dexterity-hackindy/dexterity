@@ -22,6 +22,7 @@
         .badge{font-family:'DM Mono',monospace;font-size:10px;padding:3px 8px;border-radius:4px;}
         .badge-loading{background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.2);color:var(--accent3);}
         .badge-ready{background:rgba(124,255,212,.08);border:1px solid rgba(124,255,212,.2);color:var(--accent);}
+        .badge-warn{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.2);color:var(--accent2);}
         .layout{display:grid;grid-template-columns:1fr 340px;gap:1.25rem;align-items:start;}
         .video-panel{display:flex;flex-direction:column;gap:1rem;}
         .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
@@ -41,6 +42,7 @@
         .detect-letter{font-size:52px;font-weight:800;color:var(--accent);line-height:1;}
         .detect-letter.mot{color:var(--accent3);}
         .detect-letter.num{color:var(--accent4);}
+        .detect-letter.nodata{color:var(--muted);font-size:36px;}
         .detect-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px;}
         .confidence-bar{margin-top:6px;height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
         .conf-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .15s;}
@@ -65,7 +67,6 @@
         @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
         .sentence-actions{display:flex;gap:6px;margin-top:.75rem;flex-wrap:wrap;}
         .sentence-actions .btn{font-size:12px;padding:5px 12px;}
-        /* Training panel */
         .train-panel{border:1px solid rgba(192,132,252,.25);border-radius:10px;padding:.75rem 1rem;background:rgba(192,132,252,.04);margin-top:.5rem;}
         .train-panel.hidden{display:none;}
         .train-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:.5rem;}
@@ -77,6 +78,7 @@
         .tc{padding:1px 5px;border-radius:3px;background:var(--surface);border:1px solid var(--border);font-size:10px;}
         .tc.has{border-color:rgba(192,132,252,.4);color:var(--accent4);}
         .train-status{font-family:'DM Mono',monospace;font-size:11px;min-height:16px;color:var(--accent);margin-top:4px;}
+        .nodata-banner{background:rgba(255,107,107,.07);border:1px solid rgba(255,107,107,.2);border-radius:8px;padding:.6rem .9rem;font-family:'DM Mono',monospace;font-size:11px;color:var(--accent2);margin-bottom:.5rem;display:none;}
         .history-row{display:flex;flex-wrap:wrap;gap:5px;min-height:32px;}
         .chip{font-family:'DM Mono',monospace;font-size:13px;padding:3px 9px;border-radius:5px;background:var(--surface);border:1px solid var(--border);color:var(--text);opacity:0;transform:translateY(4px);animation:chipIn .2s ease forwards;}
         @keyframes chipIn{to{opacity:1;transform:none;}}
@@ -109,7 +111,7 @@
 <div class="app">
     <header>
         <h1>ASL <span>Translator</span></h1>
-        <span class="subtitle">// fingerpose + landmark disambig · J&amp;Z motion</span>
+        <span class="subtitle">// MediaPipe hands · pure KNN · trained on your data</span>
         <span class="badge badge-loading" id="modelBadge">⟳ initializing…</span>
     </header>
 
@@ -120,6 +122,10 @@
                 <button class="btn danger"  id="stopBtn"  onclick="stopCamera()" style="display:none">Stop</button>
                 <button class="btn"         id="modeBtn"  onclick="toggleMode()" style="display:none">Mode: Letters</button>
                 <span id="statusMsg">Camera off</span>
+            </div>
+
+            <div class="nodata-banner" id="nodataBanner">
+                ⚠ No training samples for this mode yet — open Training Data and add some!
             </div>
 
             <div class="video-wrapper">
@@ -187,7 +193,7 @@
                     <div class="train-counts" id="trainCounts"></div>
                     <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
                         <a href="viewer.html" target="_blank" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent4);text-decoration:none;padding:3px 8px;border:1px solid rgba(192,132,252,.3);border-radius:4px;">Open viewer ↗</a>
-                        <button class="btn" style="font-size:10px;padding:3px 10px;" onclick="reloadUserBoosts()">Reload boosts</button>
+                        <button class="btn" style="font-size:10px;padding:3px 10px;" onclick="reloadSamples()">Reload samples</button>
                     </div>
                 </div>
             </div>
@@ -227,322 +233,165 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose@0.0.7/dist/handpose.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/fingerpose@0.1.0/dist/fingerpose.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script>
-    /* ─── LANDMARK SMOOTHER (EMA) ───
-       Applies exponential moving average to landmark positions.
-       Alpha controls smoothing: lower = smoother but more latency.
-       We use a higher alpha (less smoothing) for the raw lm passed
-       to classifiers, and a lower alpha for the drawn skeleton so
-       the visuals are butter-smooth without affecting detection.
-    */
-    var LM_COUNT = 21;
-    var smoothedDraw = null;   /* for drawing — very smooth */
-    var smoothedClass = null;  /* for classification — lighter smoothing */
-    var ALPHA_DRAW  = 0.25;    /* lower = smoother skeleton overlay */
-    var ALPHA_CLASS = 0.55;    /* higher = more responsive for detection */
+    /* ─── LANDMARK SMOOTHER (EMA) ─── */
+    var smoothedDraw = null, smoothedClass = null;
+    var ALPHA_DRAW = 0.25, ALPHA_CLASS = 0.55;
 
-    function initSmoothers() {
-        smoothedDraw  = null;
-        smoothedClass = null;
-    }
+    function initSmoothers() { smoothedDraw = null; smoothedClass = null; }
 
     function applyEMA(prev, current, alpha) {
-        if (!prev) return current.map(function(p) { return [p[0], p[1], p[2]]; });
+        if (!prev) return current.map(function(p) { return {x:p.x,y:p.y,z:p.z}; });
         return current.map(function(p, i) {
-            return [
-                prev[i][0] + alpha * (p[0] - prev[i][0]),
-                prev[i][1] + alpha * (p[1] - prev[i][1]),
-                prev[i][2] + alpha * (p[2] - prev[i][2])
-            ];
+            return {
+                x: prev[i].x + alpha*(p.x-prev[i].x),
+                y: prev[i].y + alpha*(p.y-prev[i].y),
+                z: prev[i].z + alpha*(p.z-prev[i].z)
+            };
         });
     }
 
-    function smoothLandmarks(tfLM) {
-        smoothedDraw  = applyEMA(smoothedDraw,  tfLM, ALPHA_DRAW);
-        smoothedClass = applyEMA(smoothedClass, tfLM, ALPHA_CLASS);
+    function smoothLandmarks(lm) {
+        smoothedDraw  = applyEMA(smoothedDraw,  lm, ALPHA_DRAW);
+        smoothedClass = applyEMA(smoothedClass, lm, ALPHA_CLASS);
         return { draw: smoothedDraw, classify: smoothedClass };
     }
 
     /* ─── geometry helpers ─── */
-    function normLM(lm){
-        var w=lm[0],sc=Math.hypot(lm[9].x-w.x,lm[9].y-w.y,lm[9].z-w.z)||0.001;
+    function normLM(lm) {
+        var w=lm[0], sc=Math.hypot(lm[9].x-w.x, lm[9].y-w.y, lm[9].z-w.z)||0.001;
         return lm.map(function(p){return{x:(p.x-w.x)/sc,y:(p.y-w.y)/sc,z:(p.z-w.z)/sc};});
     }
-    function d3(n,a,b){return Math.hypot(n[a].x-n[b].x,n[a].y-n[b].y,n[a].z-n[b].z);}
-    function d2(n,a,b){return Math.hypot(n[a].x-n[b].x,n[a].y-n[b].y);}
-    function ext(n,tip,pip,mcp,thr){
-        if(thr===undefined)thr=0.35;
-        var len=Math.hypot(n[pip].x-n[mcp].x,n[pip].y-n[mcp].y)+0.001;
-        return(n[mcp].y-n[tip].y)>len*thr;
-    }
-    /* Adapt TF.js [[x,y,z],...] pixel coords → [{x,y,z},...] normalised 0–1 */
-    function adaptLM(tfLM,W,H){
-        return tfLM.map(function(p){return{x:p[0]/W,y:p[1]/H,z:p[2]/W};});
-    }
-
-    /* ─── softmax helper ─── */
-    function smResult(scores,labels){
-        var vals=labels.map(function(l){return scores[l]||0;});
-        var mx=Math.max.apply(null,vals);
-        var ex=vals.map(function(v){return Math.exp((v-mx)/0.9);});
-        var sm=ex.reduce(function(a,b){return a+b;},0);
-        var pr=ex.map(function(v){return v/sm;});
-        var bi=pr.reduce(function(bi,v,i){return v>pr[bi]?i:bi;},0);
-        var sorted=labels.map(function(l,i){return{l:l,s:Math.round(scores[l]||0),p:Math.round(pr[i]*100)};});
-        sorted.sort(function(a,b){return b.s-a.s;});
-        return{label:labels[bi],confidence:pr[bi],top:sorted.slice(0,5)};
-    }
 
     /* ══════════════════════════════════════════════════════════════════
-       FINGERPOSE SETUP
+       PURE KNN CLASSIFIER
+       All classification is driven entirely by your training data.
+       No hard-coded finger rules — just cosine similarity to samples.
     ══════════════════════════════════════════════════════════════════ */
-    var estimator=null;
+    var allSamples = [];    /* [{label, flat: Float32Array}] */
+    var sampleCounts = {};  /* label → count, for the UI */
 
-    function setupFingerpose(){
-        var FC=fp.FingerCurl, FD=fp.FingerDirection, F=fp.Finger, GD=fp.GestureDescription;
-        var NC=FC.NoCurl, HC=FC.HalfCurl, FuC=FC.FullCurl;
-        var VU=FD.VerticalUp, VD=FD.VerticalDown;
-        var HL=FD.HorizontalLeft, HR=FD.HorizontalRight;
-        var DUR=FD.DiagonalUpRight, DUL=FD.DiagonalUpLeft;
-        var DDR=FD.DiagonalDownRight, DDL=FD.DiagonalDownLeft;
+    var LETTER_LABELS = ['A','B','C','D','E','F','G','H','I','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y'];
+    var NUMBER_LABELS = ['0','1','2','3','4','5','6','7','8','9'];
+    /* J and Z are handled by motion detection */
 
-        function mkG(name,curls,dirs){
-            var g=new GD(name);
-            (curls||[]).forEach(function(c){g.addCurl(c[0],c[1],c[2]||1.0);});
-            (dirs||[]).forEach(function(d){g.addDirection(d[0],d[1],d[2]||1.0);});
-            return g;
-        }
-
-        var gestures=[
-            mkG('A',[[F.Thumb,NC],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]],
-                [[F.Thumb,HR,0.9],[F.Thumb,DUR,0.9]]),
-            mkG('B',[[F.Thumb,FuC],[F.Index,NC],[F.Middle,NC],[F.Ring,NC],[F.Pinky,NC]],
-                [[F.Index,VU],[F.Middle,VU],[F.Ring,VU],[F.Pinky,VU]]),
-            mkG('C',[[F.Thumb,NC,0.8],[F.Index,HC],[F.Middle,HC],[F.Ring,HC],[F.Pinky,HC,0.8]],
-                [[F.Thumb,DUR,0.7],[F.Index,DUR,0.5],[F.Index,HR,0.5]]),
-            mkG('D',[[F.Thumb,HC,0.8],[F.Index,NC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]],
-                [[F.Index,VU]]),
-            mkG('E',[[F.Thumb,FuC],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]]),
-            mkG('F',[[F.Thumb,HC],[F.Index,HC],[F.Middle,NC],[F.Ring,NC],[F.Pinky,NC]],
-                [[F.Middle,VU],[F.Ring,VU],[F.Pinky,VU]]),
-            mkG('G',[[F.Thumb,NC],[F.Index,NC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]],
-                [[F.Index,HR,0.9],[F.Index,HL,0.9],[F.Thumb,HR,0.8],[F.Thumb,HL,0.8]]),
-            mkG('H',[[F.Thumb,FuC,0.8],[F.Index,NC],[F.Middle,NC],[F.Ring,FuC],[F.Pinky,FuC]],
-                [[F.Index,HR,0.9],[F.Index,HL,0.9],[F.Middle,HR,0.9],[F.Middle,HL,0.9]]),
-            mkG('I',[[F.Thumb,FuC,0.7],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,NC]],
-                [[F.Pinky,VU]]),
-            mkG('K',[[F.Thumb,NC],[F.Index,NC],[F.Middle,NC],[F.Ring,FuC],[F.Pinky,FuC]],
-                [[F.Index,VU],[F.Middle,VU,0.8],[F.Thumb,DUR,0.8]]),
-            mkG('L',[[F.Thumb,NC],[F.Index,NC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]],
-                [[F.Index,VU],[F.Thumb,HR,0.9],[F.Thumb,HL,0.9],[F.Thumb,DUR,0.7]]),
-            mkG('M',[[F.Thumb,FuC],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]]),
-            mkG('N',[[F.Thumb,FuC],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]]),
-            mkG('O',[[F.Thumb,HC,0.8],[F.Index,HC],[F.Middle,HC],[F.Ring,HC],[F.Pinky,HC]]),
-            mkG('P',[[F.Thumb,NC,0.8],[F.Index,NC],[F.Middle,HC,0.7],[F.Ring,FuC],[F.Pinky,FuC]],
-                [[F.Index,VD],[F.Index,DDR,0.8],[F.Index,DDL,0.8]]),
-            mkG('Q',[[F.Thumb,NC,0.8],[F.Index,NC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]],
-                [[F.Index,VD],[F.Index,DDR,0.8],[F.Thumb,VD,0.7]]),
-            mkG('R',[[F.Thumb,FuC,0.7],[F.Index,NC],[F.Middle,NC],[F.Ring,FuC],[F.Pinky,FuC]],
-                [[F.Index,VU],[F.Middle,VU]]),
-            mkG('S',[[F.Thumb,HC],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]]),
-            mkG('T',[[F.Thumb,HC],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]]),
-            mkG('U',[[F.Thumb,FuC,0.7],[F.Index,NC],[F.Middle,NC],[F.Ring,FuC],[F.Pinky,FuC]],
-                [[F.Index,VU],[F.Middle,VU]]),
-            mkG('V',[[F.Thumb,FuC,0.7],[F.Index,NC],[F.Middle,NC],[F.Ring,FuC],[F.Pinky,FuC]],
-                [[F.Index,VU],[F.Middle,VU]]),
-            mkG('W',[[F.Thumb,FuC,0.7],[F.Index,NC],[F.Middle,NC],[F.Ring,NC],[F.Pinky,FuC]],
-                [[F.Index,VU],[F.Middle,VU],[F.Ring,VU]]),
-            mkG('X',[[F.Thumb,FuC,0.7],[F.Index,HC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,FuC]],
-                [[F.Index,VD,0.7],[F.Index,DDR,0.5]]),
-            mkG('Y',[[F.Thumb,NC],[F.Index,FuC],[F.Middle,FuC],[F.Ring,FuC],[F.Pinky,NC]],
-                [[F.Thumb,HR,0.9],[F.Thumb,DUR,0.7],[F.Pinky,VU,0.7],[F.Pinky,DUL,0.7]])
-        ];
-
-        estimator=new fp.GestureEstimator(gestures);
+    /* Normalise landmarks relative to wrist/palm, then L2-normalise to a unit vector.
+       This makes the descriptor invariant to hand size and position. */
+    function flattenNormLM(lm) {
+        var n = normLM(lm);
+        var v = [];
+        n.forEach(function(p) { v.push(p.x, p.y, p.z); });
+        var mag = Math.sqrt(v.reduce(function(s, x) { return s+x*x; }, 0)) || 1;
+        return v.map(function(x) { return x/mag; });
     }
 
-    /* ══════════════════════════════════════════════════════════════════
-       LETTER CLASSIFIER
-    ══════════════════════════════════════════════════════════════════ */
-    var LETTERS=['A','B','C','D','E','F','G','H','I','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y'];
+    /* K-Nearest-Neighbours with cosine similarity.
+       Returns {label, confidence, top[], noData} */
+    function classifyKNN(lm, mode) {
+        var candidateLabels = (mode === 'numbers') ? NUMBER_LABELS : LETTER_LABELS;
 
-    function classifyLetter(tfLM, lm, rawLM){
-        var s={};
-        LETTERS.forEach(function(l){s[l]=0;});
-        if(estimator){
-            var fpRes=estimator.estimate(tfLM, 5.0);
-            fpRes.gestures.forEach(function(g){
-                if(s.hasOwnProperty(g.name)) s[g.name]=g.score*1.2;
-            });
+        var candidates = allSamples.filter(function(s) {
+            return candidateLabels.indexOf(s.label) >= 0;
+        });
+
+        if (candidates.length === 0) {
+            return {label: null, confidence: 0, top: [], noData: true};
         }
 
-        var n=normLM(lm);
-        var iE=ext(n,8,6,5),  mE=ext(n,12,10,9), rE=ext(n,16,14,13), pE=ext(n,20,18,17);
-        var iEL=ext(n,8,6,5,.1), mEL=ext(n,12,10,9,.1);
-        var ic=n[8].y-n[5].y, mc=n[12].y-n[9].y, rc=n[16].y-n[13].y;
-        var ti=d3(n,4,8), tm=d3(n,4,12);
-        var im=d3(n,8,12), mr=d3(n,12,16), rp=d3(n,16,20);
-        var tAbs=Math.abs(n[4].x-n[2].x), tEx=tAbs>0.35, tUp=n[4].y<n[2].y-0.2;
-        var tUI=n[4].y>n[6].y, tOK=n[4].y<n[5].y&&n[4].y<n[9].y;
-        var tBIP=n[4].y>n[5].y&&n[4].y<n[6].y, tBIJ=n[4].y>n[5].y&&n[4].y<n[7].y;
-        var iDx=n[8].x-n[5].x, iDy=n[8].y-n[5].y, iAng=Math.atan2(iDy,iDx);
-        var iUp=iAng<-1.1, iDn=iDy>0.25&&Math.abs(iDx)<Math.abs(iDy);
-        var iHz=Math.abs(iAng)>1.3&&Math.abs(iAng)<Math.PI-0.2;
-        /* X: index hooked — tip dropped below MCP but not fully curled past PIP */
-        var iHk=n[8].y>n[5].y&&n[8].y<n[6].y+0.25&&!iE;
-        var ac=!iE&&!mE&&!rE&&!pE;
+        var incoming = flattenNormLM(lm);
+        var K = Math.min(7, candidates.length);
 
-        if(ac){
-            /* ── S: thumb clearly over/across knuckles ── */
-            if(tOK){s['S']+=6;s['A']-=4;s['E']-=4;s['M']-=2;s['N']-=2;s['T']-=3;}
-            /* ── E: thumb tucked under, close to palm ── */
-            else if(tUI&&ti<0.5){s['E']+=5;s['A']-=3;s['S']-=4;}
-            /* ── A: thumb clearly out to side, NOT tucked ── */
-            else if(!tUI&&!tOK&&tAbs>0.30){s['A']+=6;s['S']-=5;s['E']-=4;s['M']-=3;s['N']-=3;}
+        /* Cosine similarity = dot product of two unit vectors */
+        var scored = candidates.map(function(s) {
+            var dot = 0;
+            for (var i = 0; i < incoming.length; i++) dot += incoming[i] * s.flat[i];
+            return {label: s.label, sim: dot};
+        });
+        scored.sort(function(a, b) { return b.sim - a.sim; });
 
-            /* ── T: thumb tip sits between index MCP(5) and index PIP(6) vertically ── */
-            /* Tighter than before — must be genuinely between those two joints */
-            if(tBIP){s['T']+=8;s['A']-=5;s['S']-=5;s['E']-=4;s['M']-=4;s['N']-=4;}
-            else if(tBIJ&&!tOK){s['T']+=4;s['A']-=2;s['S']-=2;}
+        var topK = scored.slice(0, K);
+        var bestSim = Math.max(0, topK[0].sim);  /* similarity of nearest neighbour */
 
-            /* ── M vs N: use how many fingertip-MCPs the thumb underlies ──
-               M: thumb tip below ring MCP (lm 13) — underlies 3 fingers
-               N: thumb tip below middle MCP (lm 9) but above ring MCP (lm 13) — underlies 2 */
-            var thumbBelowRingMCP = n[4].y > n[13].y;
-            var thumbBelowMidMCP  = n[4].y > n[9].y;
-            if(thumbBelowRingMCP){s['M']+=7;s['N']-=5;s['A']-=2;s['T']-=2;}
-            else if(thumbBelowMidMCP){s['N']+=7;s['M']-=5;s['A']-=2;s['T']-=2;}
+        /* Vote counting among K nearest */
+        var votes = {};
+        topK.forEach(function(s) { votes[s.label] = (votes[s.label]||0) + 1; });
 
-            /* ── X: hooked index — only valid if NOT matching M/N/T/S/E/A ── */
-            if(iHk&&!tOK&&!tBIP&&!tBIJ&&!tUI){s['X']+=6;s['E']-=2;s['A']-=2;s['S']-=2;}
-            else{s['X']-=5;}
-        }
+        var sortedVotes = Object.keys(votes).map(function(l) {
+            return {l: l, v: votes[l]};
+        }).sort(function(a, b) { return b.v - a.v; });
 
-        /* X can also appear when index is partially extended but hooked downward —
-           guard: other fingers must be fully curled */
-        if(!ac&&iHk&&!mE&&!rE&&!pE){s['X']+=5;s['E']-=2;}
+        var winner = sortedVotes[0].l;
+        var voteFrac = sortedVotes[0].v / K;
 
-        if(ti<0.38){s['O']+=6;s['C']-=5;}
-        else if(ti>0.45&&ti<1.4){s['C']+=5;s['O']-=4;}
+        /* Confidence blends vote majority and best-match cosine similarity */
+        var confidence = Math.min(1, voteFrac * 0.6 + bestSim * 0.4);
 
-        if(iE&&mE&&!rE&&!pE){
-            /* ── U/V/R: use finger-spread (im = index-to-middle tip distance) ──
-               R: very close/crossing (<0.16), U: together (0.16–0.26), V: spread (>0.26) */
-            if(im<0.16){s['R']+=8;s['U']-=6;s['V']-=6;}
-            else if(im<0.26){s['U']+=7;s['R']-=5;s['V']-=5;}
-            else{s['V']+=7;s['U']-=5;s['R']-=5;}
-            /* Extra U boost: fingers should be parallel (similar y positions) */
-            var fingerParallel=Math.abs(n[8].y-n[12].y)<0.2;
-            if(im<0.26&&fingerParallel){s['U']+=3;}
-            if(d2(n,4,10)<0.55&&(tUp||d2(n,4,5)<0.55)){s['K']+=5;s['U']-=2;s['V']-=2;}
-            else{s['K']-=3;}
-            if(iHz){s['H']+=4;s['U']-=2;}
-            else if(iUp){s['U']+=2;s['H']-=3;}
-        }
+        var top = sortedVotes.map(function(item) {
+            return {l: item.l, s: item.v, p: Math.round(item.v / K * 100)};
+        });
 
-        if(iEL&&!mE&&!rE&&!pE){
-            if(iUp){s['D']+=5;s['P']-=4;s['Q']-=3;}
-            if(iDn){s['P']+=5;s['D']-=4;}
-            if(iHz){s['G']+=4;s['Q']-=3;}
-            else if(iDn||n[8].y>n[5].y+0.2){s['Q']+=4;s['G']-=3;}
-        }
-
-        if(pE){
-            if(tEx&&tAbs>0.3){s['Y']+=5;s['I']-=4;}
-            else{s['I']+=4;s['Y']-=3;}
-        }
-
-        if(mE&&rE&&pE&&ti<0.4){s['F']+=4;s['O']-=3;}
-        if(iE&&!mE&&!rE&&!pE&&tEx&&iUp){s['L']+=4;}
-
-        applyUserBoosts(s, rawLM||tfLM);
-        return smResult(s,LETTERS);
-    }
-
-    /* ══════════════════════════════════════════════════════════════════
-       NUMBER CLASSIFIER
-    ══════════════════════════════════════════════════════════════════ */
-    var NUMBERS=['0','1','2','3','4','5','6','7','8','9'];
-
-    function classifyNumber(lm, rawLM){
-        var n=normLM(lm);
-        var iE=ext(n,8,6,5),mE=ext(n,12,10,9),rE=ext(n,16,14,13),pE=ext(n,20,18,17);
-        var iEL=ext(n,8,6,5,.1),mEL=ext(n,12,10,9,.1);
-        var ic=n[8].y-n[5].y,mc=n[12].y-n[9].y,rc=n[16].y-n[13].y;
-        var ti=d3(n,4,8),tm=d3(n,4,12),tr=d3(n,4,16),tp=d3(n,4,20);
-        var im=d3(n,8,12),mr=d3(n,12,16),rp=d3(n,16,20);
-        var tAbs=Math.abs(n[4].x-n[2].x),tEx=tAbs>0.30;
-        var iDy=n[8].y-n[5].y,iDx=n[8].x-n[5].x;
-        var iAng=Math.atan2(iDy,iDx),iUp=iAng<-1.0;
-        var iHk=n[8].y>n[5].y&&n[8].y<n[6].y+0.3;
-        var ac=!iE&&!mE&&!rE&&!pE;
-        var s={};
-        s['0']=(ti<0.38?8:(ti<0.5?3:-4))+(!iE&&!mE&&!rE?4:-3)+(tm<0.65?3:0)+(im<0.45&&mr<0.5?2:0)+(Math.abs(n[8].y-n[4].y)<0.55?2:0);
-        s['1']=(iE?6:-6)+(!mE&&!rE&&!pE?7:-3*[mE,rE,pE].filter(Boolean).length)+(iUp?4:0)+(!tEx?2:0)+(n[8].y<-0.5?2:0);
-        s['2']=((iE&&mE)?6:-5)+(!rE&&!pE?4:-2)+(im>0.30?5:(im>0.22?2:-3))+(iUp&&n[12].y<n[9].y-0.2?3:0)+(!tEx?1:0);
-        s['3']=((iE&&mE&&rE)?8:-5)+(!pE?3:-2)+(!tEx?2:0)+(im>0.15&&mr>0.15?2:0)+(n[8].y<n[5].y&&n[12].y<n[9].y&&n[16].y<n[13].y?3:0)+(tAbs<0.45?2:0);
-        s['4']=((iE&&mE&&rE&&pE)?9:-7)+(!tEx?4:-4)+(im>0.12&&mr>0.12&&rp>0.12?2:0)+(tAbs<0.35?2:0)+(ti>0.6?1:0);
-        s['5']=((iE&&mE&&rE&&pE)?7:-6)+(tEx?4:-3)+(im>0.3&&mr>0.25&&rp>0.25?4:0)+(tAbs>0.4?3:0)+(tp>1.2?2:0);
-        s['6']=((mE&&rE&&pE)?5:-4)+(!iE?2:0)+(tp<0.35?5:(tp<0.5?2:-2))+(iEL&&tp<0.4?2:0);
-        s['7']=((iE&&mE&&rE)?5:-4)+(!pE?2:0)+(tr<0.38?5:(tr<0.55?2:-2));
-        s['8']=((iE&&mE)?4:-4)+(!rE&&!pE?3:-2)+(tm<0.32?6:(tm<0.48?3:-3));
-        s['9']=(iHk||!iE?3:0)+(!mE&&!rE&&!pE?3:0)+(ti<0.35?6:(ti<0.5?3:-3))+(ic>0&&ic<0.5?2:0);
-        if(ti<0.35&&(iHk||!iEL)){s['9']+=3;s['0']-=2;}
-        else if(ti<0.38&&iEL){s['0']+=2;s['9']-=1;}
-        if(iE&&mE&&im>0.28&&!rE){s['2']+=3;s['1']-=3;}
-        if(iE&&!mE){s['1']+=3;s['2']-=3;}
-        if(iE&&mE&&rE&&pE){if(tEx&&tAbs>0.4){s['5']+=3;s['4']-=2;}else{s['4']+=2;s['5']-=1;}}
-        if(tp<0.38&&pE){s['6']+=3;s['9']-=2;}
-        if(ti<0.35&&!pE){s['9']+=2;s['6']-=2;}
-        if(iE&&mE&&rE&&!pE){if(tr<0.45){s['7']+=3;s['3']-=2;}else{s['3']+=2;s['7']-=1;}}
-        if(iE&&mE&&!rE&&!pE){if(tm<0.4){s['8']+=3;s['2']-=2;}else{s['2']+=2;s['8']-=1;}}
-        applyUserBoosts(s, rawLM);
-        return smResult(s,NUMBERS);
+        return {label: winner, confidence: confidence, top: top.slice(0, 5), noData: false};
     }
 
     /* ══════════════════════════════════════════════════════════════════
        J & Z MOTION DETECTION
+       (these two letters are defined by movement, not static pose)
     ══════════════════════════════════════════════════════════════════ */
-    var TRAIL_LEN=30,idxTrail=[],pkTrail=[],motCD=0;
-    function pushTrail(lm){
-        var wx=lm[0].x,wy=lm[0].y,ps=Math.hypot(lm[9].x-wx,lm[9].y-wy)||0.01;
-        idxTrail.push({x:(lm[8].x-wx)/ps,y:(lm[8].y-wy)/ps});
-        pkTrail.push({x:(lm[20].x-wx)/ps,y:(lm[20].y-wy)/ps});
+    var TRAIL_LEN=30, idxTrail=[], pkTrail=[], motCD=0;
+
+    function pushTrail(lm) {
+        var wx=lm[0].x, wy=lm[0].y, ps=Math.hypot(lm[9].x-wx,lm[9].y-wy)||0.01;
+        idxTrail.push({x:(lm[8].x-wx)/ps, y:(lm[8].y-wy)/ps});
+        pkTrail.push( {x:(lm[20].x-wx)/ps,y:(lm[20].y-wy)/ps});
         if(idxTrail.length>TRAIL_LEN){idxTrail.shift();pkTrail.shift();}
     }
-    function trailDist(t){var d=0;for(var i=1;i<t.length;i++)d+=Math.hypot(t[i].x-t[i-1].x,t[i].y-t[i-1].y);return d;}
-    function detectJ(lm){
+
+    function trailDist(t) {
+        var d=0;
+        for(var i=1;i<t.length;i++) d+=Math.hypot(t[i].x-t[i-1].x,t[i].y-t[i-1].y);
+        return d;
+    }
+
+    /* Helper: is pinky extended, others curled? (for J) */
+    function normLMExt(lm, tip, pip, mcp, thr) {
+        if(thr===undefined)thr=0.35;
+        var n=normLM(lm);
+        var len=Math.hypot(n[pip].x-n[mcp].x,n[pip].y-n[mcp].y)+0.001;
+        return(n[mcp].y-n[tip].y)>len*thr;
+    }
+
+    function detectJ(lm) {
         if(motCD>0)return false;
         var n=normLM(lm);
-        if(!(!ext(n,8,6,5)&&!ext(n,12,10,9)&&!ext(n,16,14,13)&&ext(n,20,18,17)))return false;
+        var iE=normLMExt(lm,8,6,5),mE=normLMExt(lm,12,10,9),rE=normLMExt(lm,16,14,13),pE=normLMExt(lm,20,18,17);
+        if(!(!iE&&!mE&&!rE&&pE))return false;
         if(pkTrail.length<18||trailDist(pkTrail)<0.55)return false;
         var h=Math.floor(pkTrail.length*0.55),s1=pkTrail.slice(0,h),s2=pkTrail.slice(h);
         var dy1=s1[s1.length-1].y-s1[0].y,dx2=s2[s2.length-1].x-s2[0].x,dy2=Math.abs(s2[s2.length-1].y-s2[0].y);
         return dy1>0.22&&Math.abs(dx2)>0.18&&dy2<0.25;
     }
-    function detectZ(lm){
+
+    function detectZ(lm) {
         if(motCD>0)return false;
         var n=normLM(lm);
-        if(!(ext(n,8,6,5)&&!ext(n,12,10,9)&&!ext(n,16,14,13)&&!ext(n,20,18,17)))return false;
-        /* Lowered min trail length from 20→16 and min distance from 0.7→0.55
-           so Z is recognised with slightly shorter strokes */
+        var iE=normLMExt(lm,8,6,5),mE=normLMExt(lm,12,10,9),rE=normLMExt(lm,16,14,13),pE=normLMExt(lm,20,18,17);
+        if(!(iE&&!mE&&!rE&&!pE))return false;
         if(idxTrail.length<16||trailDist(idxTrail)<0.55)return false;
         var nl=idxTrail.length;
         var t1=idxTrail.slice(0,Math.floor(nl*.33)),t2=idxTrail.slice(Math.floor(nl*.33),Math.floor(nl*.66)),t3=idxTrail.slice(Math.floor(nl*.66));
         if(t1.length<3||t2.length<3||t3.length<3)return false;
         var dx1=t1[t1.length-1].x-t1[0].x,dx2=t2[t2.length-1].x-t2[0].x,dy2=t2[t2.length-1].y-t2[0].y,dx3=t3[t3.length-1].x-t3[0].x;
-        /* Lowered horizontal thresholds from 0.15/0.12→0.12/0.10 and diagonal from 0.1→0.08 */
         return Math.abs(dx1)>0.12&&Math.abs(dx2)>0.10&&dy2>0.08&&Math.abs(dx3)>0.10&&Math.sign(dx1)!==Math.sign(dx2)&&Math.sign(dx3)===Math.sign(dx1);
     }
 
     /* ══════════════════════════════════════════════════════════════════
        HOLD LOGIC
     ══════════════════════════════════════════════════════════════════ */
-    var HOLD_MS=1200,holdCand=null,holdStart=null;
-    function updateHold(label,isMotion,isNum){
+    var HOLD_MS=1200, holdCand=null, holdStart=null;
+
+    function updateHold(label, isMotion, isNum) {
         var arc=document.getElementById('holdArc'),lbl=document.getElementById('holdLabel'),C=113;
         if(isMotion){
             commitSign(label,'mot');motCD=25;idxTrail=[];pkTrail=[];
@@ -563,17 +412,13 @@
     }
 
     /* ══════════════════════════════════════════════════════════════════
-       INDEXEDDB — training data storage
-       Schema: store "samples" — {id, label, landmarks[[x,y,z]x21], ts}
-       On load we compute per-label mean landmark vectors and build
-       a boost table used by the classifier.
+       INDEXEDDB — training data
+       Shared with viewer.html (same DB name + store).
     ══════════════════════════════════════════════════════════════════ */
     var DB=null, DB_NAME='asl_training', DB_VER=1, STORE='samples';
-    var userBoosts={};   /* label → bias score added to classifier */
-    var sampleCounts={}; /* label → count */
-    var lastClassLM=null; /* latest classification landmarks for capture */
+    var lastClassLM=null;
 
-    function openDB(cb){
+    function openDB(cb) {
         var req=indexedDB.open(DB_NAME,DB_VER);
         req.onupgradeneeded=function(e){
             e.target.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});
@@ -582,86 +427,66 @@
         req.onerror=function(){console.warn('IndexedDB unavailable');};
     }
 
-    function dbGetAll(cb){
+    function dbGetAll(cb) {
         if(!DB)return cb([]);
         var tx=DB.transaction(STORE,'readonly');
         tx.objectStore(STORE).getAll().onsuccess=function(e){cb(e.target.result);};
     }
 
-    function dbAdd(record,cb){
+    function dbAdd(record, cb) {
         if(!DB)return;
         var tx=DB.transaction(STORE,'readwrite');
         tx.objectStore(STORE).add(record).onsuccess=function(){cb&&cb();};
     }
 
-    /* Build boost table from all saved samples.
-       For each label we compute the mean normalised landmarks,
-       then for any incoming frame we score cosine-style similarity
-       by comparing the current landmarks against each label's mean.
-       The boost is the similarity score scaled to ±4 and added to
-       the classifier scores map before softmax. */
-    function reloadUserBoosts(){
-        dbGetAll(function(rows){
-            sampleCounts={};
-            var means={};  /* label → sum of flat 63-dim vectors */
-            rows.forEach(function(r){
-                var l=r.label;
-                sampleCounts[l]=(sampleCounts[l]||0)+1;
-                if(!means[l])means[l]=new Array(63).fill(0);
-                var flat=flattenLM(r.landmarks);
-                flat.forEach(function(v,i){means[l][i]+=v;});
-            });
-            userBoosts={};
-            Object.keys(means).forEach(function(l){
-                var n=sampleCounts[l];
-                userBoosts[l]=means[l].map(function(v){return v/n;});
+    /* Load all samples from DB, pre-compute flattened vectors for fast KNN */
+    function reloadSamples() {
+        dbGetAll(function(rows) {
+            sampleCounts = {};
+            allSamples = [];
+            rows.forEach(function(r) {
+                if(!r.landmarks||r.landmarks.length<21)return;
+                sampleCounts[r.label] = (sampleCounts[r.label]||0) + 1;
+                try {
+                    allSamples.push({label: r.label, flat: flattenNormLM(r.landmarks)});
+                } catch(e){}
             });
             renderTrainCounts();
+            updateNodataBanner();
         });
     }
 
-    /* Flatten [[x,y,z]×21] → 63-dim vector, then L2-normalise */
-    function flattenLM(lm){
-        var v=[];
-        lm.forEach(function(p){v.push(p[0],p[1],p[2]);});
-        var mag=Math.sqrt(v.reduce(function(s,x){return s+x*x;},0))||1;
-        return v.map(function(x){return x/mag;});
+    /* Keep old name working (called from HTML button) */
+    function reloadUserBoosts() { reloadSamples(); }
+
+    function updateNodataBanner() {
+        var banner=document.getElementById('nodataBanner');
+        if(!banner)return;
+        var candidateLabels=(curMode==='numbers')?NUMBER_LABELS:LETTER_LABELS;
+        var has=allSamples.some(function(s){return candidateLabels.indexOf(s.label)>=0;});
+        banner.style.display=has?'none':'block';
     }
 
-    /* Apply user boosts to a scores map (modifies in place) */
-    function applyUserBoosts(scores,tfLM){
-        if(!tfLM||Object.keys(userBoosts).length===0)return;
-        var incoming=flattenLM(tfLM);
-        Object.keys(userBoosts).forEach(function(l){
-            if(scores[l]===undefined)return;
-            var mean=userBoosts[l];
-            /* dot product = cosine similarity (both normalised) */
-            var dot=0;
-            incoming.forEach(function(v,i){dot+=v*mean[i];});
-            /* dot is in [-1,1], scale to boost ±5 */
-            scores[l]+=(dot-0.5)*10;
-        });
-    }
-
-    function saveSample(){
+    function saveSample() {
         var lbl=document.getElementById('trainLabel').value;
         if(!lbl){showTrainStatus('Pick a label first','var(--accent2)');return;}
         if(!lastClassLM){showTrainStatus('No hand in frame','var(--accent2)');return;}
+        /* Save landmarks as [{x,y,z}] objects — consistent with viewer.html */
         var record={label:lbl,landmarks:lastClassLM,ts:Date.now()};
         dbAdd(record,function(){
             showTrainStatus('Saved sample for '+lbl+' ✓','var(--accent)');
-            reloadUserBoosts();
+            reloadSamples();
         });
     }
 
-    function showTrainStatus(msg,col){
+    function showTrainStatus(msg, col) {
         var el=document.getElementById('trainStatus');
         el.textContent=msg;el.style.color=col||'var(--accent)';
         clearTimeout(showTrainStatus._t);
         showTrainStatus._t=setTimeout(function(){el.textContent='';},2200);
     }
 
-    function renderTrainCounts(){
+    function renderTrainCounts() {
         var el=document.getElementById('trainCounts');
         if(!el)return;
         var labels=['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
@@ -672,7 +497,7 @@
         }).join('');
     }
 
-    function toggleTrainPanel(){
+    function toggleTrainPanel() {
         var p=document.getElementById('trainPanel');
         var btn=p.previousElementSibling.querySelector('button');
         var hidden=p.classList.toggle('hidden');
@@ -682,18 +507,12 @@
 
     /* ══════════════════════════════════════════════════════════════════
        CURSOR-AWARE SENTENCE BUILDER
-       sentence = array of {ch, type} objects
-       cursor = integer index 0..sentence.length (insertion point)
     ══════════════════════════════════════════════════════════════════ */
-    var sentence=[],cursorPos=0,signsN=0;
+    var sentence=[], cursorPos=0, signsN=0;
 
-    function renderSentence(){
+    function renderSentence() {
         var el=document.getElementById('sentenceDisplay');
-        if(sentence.length===0){
-            el.className='sentence-display end-cursor';
-            el.innerHTML='';
-            return;
-        }
+        if(sentence.length===0){el.className='sentence-display end-cursor';el.innerHTML='';return;}
         el.className='sentence-display'+(cursorPos===sentence.length?' end-cursor':'');
         el.innerHTML=sentence.map(function(item,i){
             var ch=item.ch===' '?'\u00a0':item.ch;
@@ -702,12 +521,11 @@
         }).join('');
     }
 
-    function commitSign(ch,type){
+    function commitSign(ch, type) {
         sentence.splice(cursorPos,0,{ch:ch,type:type});
         cursorPos++;signsN++;
         document.getElementById('signsAdded').textContent=signsN;
-        renderSentence();
-        addChip(ch,type);
+        renderSentence();addChip(ch,type);
     }
 
     function cursorLeft(){if(cursorPos>0){cursorPos--;renderSentence();}}
@@ -722,28 +540,23 @@
 
     function deleteChar(){
         if(cursorPos===0)return;
-        sentence.splice(cursorPos-1,1);
-        cursorPos--;renderSentence();
+        sentence.splice(cursorPos-1,1);cursorPos--;renderSentence();
     }
 
-    function clearSentence(){
-        sentence=[];cursorPos=0;renderSentence();
-        document.getElementById('historyRow').innerHTML='';
-    }
+    function clearSentence(){sentence=[];cursorPos=0;renderSentence();document.getElementById('historyRow').innerHTML='';}
 
     function copySentence(){
         var txt=sentence.map(function(i){return i.ch;}).join('');
         if(txt)navigator.clipboard.writeText(txt).catch(function(){});
     }
 
-    function addChip(ch,type){
+    function addChip(ch, type) {
         var row=document.getElementById('historyRow'),chip=document.createElement('span');
         chip.className='chip'+(type==='mot'?' mot':(type==='num'?' num':(type==='space'?' space':'')));
         chip.textContent=ch;row.appendChild(chip);
         while(row.children.length>24)row.removeChild(row.firstChild);
     }
 
-    /* Keyboard shortcuts: ←/→ move cursor, Backspace deletes */
     document.addEventListener('keydown',function(e){
         if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;
         if(e.key==='ArrowLeft'){e.preventDefault();cursorLeft();}
@@ -751,20 +564,23 @@
         else if(e.key==='Backspace'){e.preventDefault();deleteChar();}
     });
 
-    function setStatus(msg,active){var el=document.getElementById('statusMsg');el.textContent=msg;el.className=active?'active':'';}
+    function setStatus(msg, active) {
+        var el=document.getElementById('statusMsg');el.textContent=msg;el.className=active?'active':'';
+    }
 
-    /* init DB on page load */
-    openDB(reloadUserBoosts);
+    openDB(reloadSamples);
 
     var curMode='letters';
-    function toggleMode(){
+    function toggleMode() {
         curMode=curMode==='letters'?'numbers':'letters';
         var btn=document.getElementById('modeBtn'),pill=document.getElementById('modePill');
         if(curMode==='numbers'){btn.textContent='Mode: Numbers';btn.classList.add('mode-num');pill.textContent='NUMBERS';pill.className='mode-pill num';}
         else{btn.textContent='Mode: Letters';btn.classList.remove('mode-num');pill.textContent='LETTERS';pill.className='mode-pill let';}
         holdCand=null;holdStart=null;
+        updateNodataBanner();
     }
 
+    /* Build reference grid */
     (function(){
         var items=[
             {l:'A'},{l:'B'},{l:'C'},{l:'D'},{l:'E'},{l:'F'},
@@ -786,25 +602,21 @@
         });
     })();
 
-    function highlightRef(lbl){
+    function highlightRef(lbl) {
         document.querySelectorAll('.ref-cell').forEach(function(c){c.classList.remove('active');});
         if(lbl){var el=document.getElementById('gc-'+lbl);if(el)el.classList.add('active');}
     }
 
-    document.addEventListener('DOMContentLoaded',function(){
-        document.getElementById('modelBadge').textContent='⟳ loading tf.js…';
-    });
-
+    /* ══════════════════════════════════════════════════════════════════
+       CAMERA & INFERENCE — MediaPipe Hands
+    ══════════════════════════════════════════════════════════════════ */
     var CONN=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
     var TIPS=[4,8,12,16,20];
 
-    /* ══════════════════════════════════════════════════════════════════
-       CAMERA & INFERENCE
-    ══════════════════════════════════════════════════════════════════ */
-    var stream=null, animF=null, tfModel=null;
+    var stream=null, animF=null, handsModel=null;
     var vid=null, ov=null, octx=null, tc=null, tctx=null, scrTrail=[];
 
-    async function startCamera(){
+    async function startCamera() {
         vid=document.getElementById('video');
         ov=document.getElementById('overlay'); octx=ov.getContext('2d');
         tc=document.getElementById('trailCanvas'); tctx=tc.getContext('2d');
@@ -820,28 +632,27 @@
             document.getElementById('stopBtn').style.display='';
             document.getElementById('modeBtn').style.display='';
 
-            setStatus('Loading TF.js handpose model…');
+            setStatus('Loading MediaPipe hands model…');
             document.getElementById('modelBadge').textContent='⟳ loading model…';
             document.getElementById('modelBadge').className='badge badge-loading';
 
-            tfModel=await handpose.load({
-                detectionConfidence:0.8,
-                maxContinuousChecks:5,
-                iouThreshold:0.3,
-                scoreThreshold:0.75
-            });
+            handsModel=new Hands({locateFile:function(f){return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/'+f;}});
+            handsModel.setOptions({maxNumHands:1,modelComplexity:1,minDetectionConfidence:0.72,minTrackingConfidence:0.62});
+            handsModel.onResults(onResults);
+            await handsModel.initialize();
 
-            setupFingerpose();
             initSmoothers();
 
-            document.getElementById('modelBadge').textContent='✓ fingerpose ready';
+            var sampleCount=allSamples.length;
+            document.getElementById('modelBadge').textContent='✓ ready · '+sampleCount+' samples';
             document.getElementById('modelBadge').className='badge badge-ready';
             setStatus('Tracking…',true);
+            updateNodataBanner();
             loop();
-        } catch(e){ setStatus('Error: '+e.message); }
+        } catch(e) { setStatus('Error: '+e.message); }
     }
 
-    function stopCamera(){
+    function stopCamera() {
         if(stream){stream.getTracks().forEach(function(t){t.stop();});stream=null;}
         if(animF){cancelAnimationFrame(animF);animF=null;}
         if(octx)octx.clearRect(0,0,ov.width,ov.height);
@@ -850,6 +661,7 @@
         document.getElementById('startBtn').style.display='';
         document.getElementById('stopBtn').style.display='none';
         document.getElementById('modeBtn').style.display='none';
+        document.getElementById('nodataBanner').style.display='none';
         ['handCount','currentSign'].forEach(function(id){document.getElementById(id).textContent='—';});
         document.getElementById('detectLetter').textContent='—';
         document.getElementById('detectLabel').textContent='stopped';
@@ -857,29 +669,26 @@
         document.getElementById('confPct').textContent='—';
         document.getElementById('motBadge').style.display='none';
         updateHold(null,false,false);highlightRef(null);
-        idxTrail=[];pkTrail=[];scrTrail=[];
+        idxTrail=[];pkTrail=[];scrTrail=[];lastClassLM=null;
         initSmoothers();
         setStatus('Camera off');
     }
 
-    async function loop(){
+    async function loop() {
         if(!stream)return;
         if(vid&&vid.readyState>=2){
-            try{
-                var preds=await tfModel.estimateHands(vid);
-                onResults(preds);
-            } catch(e){}
+            try{ await handsModel.send({image:vid}); } catch(e){}
         }
         if(stream) animF=requestAnimationFrame(loop);
     }
 
-    function onResults(preds){
+    function onResults(results) {
         ov.width=tc.width=vid.videoWidth;
         ov.height=tc.height=vid.videoHeight;
         octx.clearRect(0,0,ov.width,ov.height);
         if(motCD>0)motCD--;
 
-        var det=preds.length;
+        var det=results.multiHandLandmarks?results.multiHandLandmarks.length:0;
         document.getElementById('handCount').textContent=det;
         var mb=document.getElementById('motBadge');
 
@@ -891,9 +700,7 @@
             document.getElementById('currentSign').textContent='—';
             mb.style.display='none';
             updateHold(null,false,false);highlightRef(null);
-            idxTrail=[];pkTrail=[];scrTrail=[];
-            /* Reset smoothers when hand disappears so they don't
-               carry stale positions into the next detection */
+            idxTrail=[];pkTrail=[];scrTrail=[];lastClassLM=null;
             initSmoothers();
             tctx.clearRect(0,0,tc.width,tc.height);
             document.getElementById('topScores').innerHTML='—';
@@ -901,39 +708,31 @@
             return;
         }
 
-        /* Raw landmarks from TF.js */
-        var tfLM=preds[0].landmarks;
+        var rawLM=results.multiHandLandmarks[0];
+        var smoothed=smoothLandmarks(rawLM);
+        var drawLM=smoothed.draw;
+        var classLM=smoothed.classify;
 
-        /* Apply EMA smoothing — get two versions:
-           - smoothedDraw: very smooth, used for skeleton rendering
-           - smoothedClass: lighter smoothing, used for classification */
-        var smoothed = smoothLandmarks(tfLM);
-        var drawLM   = smoothed.draw;    /* [[x,y,z], ...] — smooth for visuals */
-        var classLM  = smoothed.classify; /* [[x,y,z], ...] — responsive for detection */
+        lastClassLM=classLM;
 
-        /* Store for training capture */
-        lastClassLM = classLM;
-
-        /* Adapt classification landmarks to [{x,y,z}] normalised */
-        var lm = adaptLM(classLM, ov.width, ov.height);
-
-        /* Draw skeleton using the smoothed draw landmarks */
+        /* Draw skeleton */
+        var W=ov.width, H=ov.height;
         CONN.forEach(function(p){
             octx.beginPath();
-            octx.moveTo(drawLM[p[0]][0], drawLM[p[0]][1]);
-            octx.lineTo(drawLM[p[1]][0], drawLM[p[1]][1]);
+            octx.moveTo(drawLM[p[0]].x*W,drawLM[p[0]].y*H);
+            octx.lineTo(drawLM[p[1]].x*W,drawLM[p[1]].y*H);
             octx.strokeStyle='rgba(124,255,212,.45)';octx.lineWidth=2;octx.stroke();
         });
         drawLM.forEach(function(p,i){
             var tip=TIPS.indexOf(i)>=0;
-            octx.beginPath();octx.arc(p[0],p[1],tip?7:4,0,2*Math.PI);
+            octx.beginPath();octx.arc(p.x*W,p.y*H,tip?7:4,0,2*Math.PI);
             octx.fillStyle=tip?'rgba(255,209,102,.95)':'rgba(200,210,255,.85)';octx.fill();
             octx.strokeStyle=tip?'rgba(220,140,0,.8)':'rgba(124,255,212,.5)';
             octx.lineWidth=1.5;octx.stroke();
         });
 
-        /* Screen trail uses draw landmarks for visual smoothness */
-        scrTrail.push({x:drawLM[8][0],y:drawLM[8][1]});
+        /* Trail */
+        scrTrail.push({x:drawLM[8].x*W,y:drawLM[8].y*H});
         if(scrTrail.length>TRAIL_LEN)scrTrail.shift();
         tctx.clearRect(0,0,tc.width,tc.height);
         for(var i=1;i<scrTrail.length;i++){
@@ -942,11 +741,11 @@
             tctx.beginPath();tctx.moveTo(scrTrail[i-1].x,scrTrail[i-1].y);tctx.lineTo(scrTrail[i].x,scrTrail[i].y);tctx.stroke();
         }
 
-        /* Motion detection + classification use the responsive lm */
-        pushTrail(lm);
+        /* Motion detection */
+        pushTrail(classLM);
 
         if(curMode==='letters'){
-            var isJ=detectJ(lm),isZ=detectZ(lm);
+            var isJ=detectJ(classLM), isZ=detectZ(classLM);
             if(isJ||isZ){
                 var ml=isJ?'J':'Z';
                 mb.style.display='block';mb.textContent='✦ '+ml+' motion';
@@ -959,22 +758,35 @@
         }
         mb.style.display='none';
 
-        /* classifyLetter gets the classification-smoothed tfLM array */
-        var res2=curMode==='numbers'?classifyNumber(lm,classLM):classifyLetter(classLM,lm,classLM);
-        var isN=curMode==='numbers',pct=Math.round(res2.confidence*100);
+        /* KNN classification — purely from your training data */
+        var isN=(curMode==='numbers');
+        var res=classifyKNN(classLM, curMode);
         var dl=document.getElementById('detectLetter');
-        dl.textContent=res2.label||'?';dl.className='detect-letter'+(isN?' num':'');
-        document.getElementById('detectLabel').textContent=res2.label?(isN?'Number: '+res2.label:'ASL: "'+res2.label+'"'):'uncertain';
+
+        if(res.noData){
+            dl.textContent='?';dl.className='detect-letter nodata';
+            document.getElementById('detectLabel').textContent='train first → open Training Data';
+            document.getElementById('confFill').style.width='0%';document.getElementById('confFill').className='conf-fill';
+            document.getElementById('confPct').textContent='—';document.getElementById('currentSign').textContent='—';
+            document.getElementById('topScores').innerHTML='<span style="color:var(--accent2);font-size:10px;">no training samples for this mode</span>';
+            document.getElementById('debugInfo').textContent='KNN · mode: '+curMode+' · samples: 0';
+            highlightRef(null);updateHold(null,false,false);
+            return;
+        }
+
+        var pct=Math.round(res.confidence*100);
+        dl.textContent=res.label||'?';dl.className='detect-letter'+(isN?' num':'');
+        document.getElementById('detectLabel').textContent=res.label?(isN?'Number: '+res.label:'ASL: "'+res.label+'"'):'uncertain';
         document.getElementById('confFill').style.width=pct+'%';document.getElementById('confFill').className='conf-fill'+(isN?' num':'');
-        document.getElementById('confPct').textContent=pct+'%';document.getElementById('currentSign').textContent=res2.label||'—';
+        document.getElementById('confPct').textContent=pct+'%';document.getElementById('currentSign').textContent=res.label||'—';
 
-        document.getElementById('topScores').innerHTML=res2.top.map(function(sc,i){
-            return '<span class="sc'+(i===0?(isN?' best-num':' best'):'')+'">'+ sc.l+': '+sc.s+' ('+sc.p+'%)</span>';
+        document.getElementById('topScores').innerHTML=res.top.map(function(sc,i){
+            return '<span class="sc'+(i===0?(isN?' best-num':' best'):'')+'">'+ sc.l+': '+sc.s+'nn ('+sc.p+'%)</span>';
         }).join('');
-        document.getElementById('debugInfo').textContent='fingerpose + landmarks · mode: '+curMode+' · smoothing: draw='+ALPHA_DRAW+' class='+ALPHA_CLASS;
+        document.getElementById('debugInfo').textContent='KNN · mode: '+curMode+' · total samples: '+allSamples.length+' · for mode: '+allSamples.filter(function(s){return(isN?NUMBER_LABELS:LETTER_LABELS).indexOf(s.label)>=0;}).length;
 
-        highlightRef(res2.label);
-        updateHold(res2.confidence>0.28?res2.label:null,false,isN);
+        highlightRef(res.label);
+        updateHold(res.confidence>0.40?res.label:null, false, isN);
     }
 </script>
 </body>
