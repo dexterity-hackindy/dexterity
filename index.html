@@ -4,17 +4,51 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ASL Hand Tracking</title>
-    <link rel="stylesheet" href="src/styles.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: sans-serif; background: #111; color: #eee; padding: 1.5rem; }
+        h1 { font-size: 20px; font-weight: 500; margin-bottom: 1rem; }
+        .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+        button { padding: 8px 20px; border-radius: 8px; border: 1px solid #444; background: #222; color: #eee; cursor: pointer; font-size: 14px; }
+        button:hover { background: #333; }
+        #statusMsg { font-size: 13px; color: #aaa; }
+        .main-layout { display: flex; gap: 16px; align-items: flex-start; max-width: 960px; }
+        .video-col { flex: 0 0 auto; width: 480px; }
+        .video-wrapper { position: relative; display: inline-block; width: 100%; }
+        video { width: 100%; border-radius: 10px; border: 1px solid #333; display: block; transform: scaleX(-1); }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 10px; transform: scaleX(-1); }
+        .asl-col { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+        .letter-card { background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 12px; padding: 16px; text-align: center; }
+        .letter-display { font-size: 96px; font-weight: 600; line-height: 1.1; color: #7bb8f8; min-height: 110px; display: flex; align-items: center; justify-content: center; }
+        .letter-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+        .confidence-bar-wrap { background: #333; border-radius: 4px; height: 4px; margin: 10px 0 4px; overflow: hidden; }
+        .confidence-bar { height: 100%; background: #7bb8f8; border-radius: 4px; transition: width 0.15s ease; width: 0%; }
+        .hold-ring-wrap { display: flex; justify-content: center; margin: 4px 0; }
+        .hold-ring { width: 36px; height: 36px; }
+        .sentence-card { background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 12px; padding: 14px; }
+        .sentence-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .sentence-text { font-size: 20px; min-height: 30px; color: #eee; word-break: break-all; letter-spacing: 2px; }
+        .sentence-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .sentence-actions button { font-size: 13px; padding: 6px 14px; }
+        .finger-card { background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 12px; padding: 14px; }
+        .finger-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+        .finger-row { display: flex; gap: 8px; align-items: flex-end; justify-content: center; }
+        .finger-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .finger-name { font-size: 10px; color: #555; }
+        .finger-pip { width: 18px; height: 22px; border-radius: 4px; border: 1px solid #333; background: #2a2a2a; transition: background 0.1s; }
+        .finger-pip.up { background: #7bb8f8; border-color: #5a9ae0; }
+        .hint-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 14px; font-size: 12px; color: #555; line-height: 1.6; }
+        .hint-card strong { color: #888; font-weight: 500; }
+        @media (max-width: 720px) { .main-layout { flex-direction: column; } .video-col { width: 100%; } }
+    </style>
 </head>
 <body>
 <h1>ASL Fingerspelling — Hand Tracking</h1>
-
 <div class="controls">
     <button id="startBtn" onclick="startCamera()">Start camera</button>
     <button id="stopBtn" onclick="stopCamera()" style="display:none;">Stop</button>
     <span id="statusMsg">Camera off</span>
 </div>
-
 <div class="main-layout">
     <div class="video-col">
         <div class="video-wrapper">
@@ -22,25 +56,20 @@
             <canvas id="overlay"></canvas>
         </div>
     </div>
-
     <div class="asl-col">
         <div class="letter-card">
             <div class="letter-display" id="letterDisplay">—</div>
-            <div class="confidence-bar-wrap">
-                <div class="confidence-bar" id="confBar"></div>
-            </div>
+            <div class="confidence-bar-wrap"><div class="confidence-bar" id="confBar"></div></div>
             <div class="letter-label" id="letterLabel">No hand detected</div>
             <div class="hold-ring-wrap">
                 <svg class="hold-ring" viewBox="0 0 36 36">
                     <circle cx="18" cy="18" r="15" fill="none" stroke="#333" stroke-width="3"/>
                     <circle id="holdArc" cx="18" cy="18" r="15" fill="none" stroke="#7bb8f8"
-                            stroke-width="3" stroke-dasharray="0 94.25"
-                            stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                            stroke-width="3" stroke-dasharray="0 94.25" stroke-linecap="round" transform="rotate(-90 18 18)"/>
                 </svg>
             </div>
             <div class="letter-label">Hold still to add letter</div>
         </div>
-
         <div class="sentence-card">
             <div class="sentence-label">Sentence builder</div>
             <div class="sentence-text" id="sentenceText">&nbsp;</div>
@@ -50,36 +79,19 @@
                 <button onclick="clearSentence()">Clear</button>
             </div>
         </div>
-
         <div class="finger-card">
             <div class="finger-label">Finger states</div>
             <div class="finger-row">
-                <div class="finger-col">
-                    <div class="finger-pip" id="f-thumb"></div>
-                    <div class="finger-name">Thumb</div>
-                </div>
-                <div class="finger-col">
-                    <div class="finger-pip" id="f-index"></div>
-                    <div class="finger-name">Index</div>
-                </div>
-                <div class="finger-col">
-                    <div class="finger-pip" id="f-middle"></div>
-                    <div class="finger-name">Middle</div>
-                </div>
-                <div class="finger-col">
-                    <div class="finger-pip" id="f-ring"></div>
-                    <div class="finger-name">Ring</div>
-                </div>
-                <div class="finger-col">
-                    <div class="finger-pip" id="f-pinky"></div>
-                    <div class="finger-name">Pinky</div>
-                </div>
+                <div class="finger-col"><div class="finger-pip" id="f-thumb"></div><div class="finger-name">Thumb</div></div>
+                <div class="finger-col"><div class="finger-pip" id="f-index"></div><div class="finger-name">Index</div></div>
+                <div class="finger-col"><div class="finger-pip" id="f-middle"></div><div class="finger-name">Middle</div></div>
+                <div class="finger-col"><div class="finger-pip" id="f-ring"></div><div class="finger-name">Ring</div></div>
+                <div class="finger-col"><div class="finger-pip" id="f-pinky"></div><div class="finger-name">Pinky</div></div>
             </div>
         </div>
-
         <div class="hint-card">
-            <strong>Tips:</strong> Face your palm toward the camera. Sign letters clearly and hold for 1.5s to add to the sentence. Supports A–Z fingerspelling.<br><br>
-            <strong>Best letters:</strong> A, B, C, D, F, I, L, O, S, U, V, W, Y and numbers 1–5.
+            <strong>Powered by fingerpose</strong> — each letter is described by per-finger curl and direction rules, scored 0–10. Score threshold: 7.5.<br><br>
+            <strong>Covers A–Y</strong> (J and Z require motion tracking and are not included). Hold a letter still for 1.5s to commit it to the sentence.
         </div>
     </div>
 </div>
@@ -87,6 +99,343 @@
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
-<script src="src/main.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fingerpose@0.1.0/dist/fingerpose.js"></script>
+<script>
+    let stream = null, animFrame = null, hands = null, gestureEstimator = null;
+    let sentence = '';
+    let holdLetter = null, holdStart = 0;
+    const HOLD_MS = 1500;
+    const SCORE_THRESHOLD = 7.5;
+
+    const video  = document.getElementById('video');
+    const canvas = document.getElementById('overlay');
+    const ctx    = canvas.getContext('2d');
+
+    const HAND_CONNECTIONS = [
+        [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],
+        [5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],
+        [13,17],[17,18],[18,19],[19,20],[0,17]
+    ];
+    const FINGER_TIPS = [4, 8, 12, 16, 20];
+
+    function setStatus(msg) { document.getElementById('statusMsg').textContent = msg; }
+
+    function buildGestures() {
+        const { GestureDescription, Finger, FingerCurl, FingerDirection } = fp;
+        const NC = FingerCurl.NoCurl, HC = FingerCurl.HalfCurl, FC = FingerCurl.FullCurl;
+        const VU = FingerDirection.VerticalUp, VD = FingerDirection.VerticalDown;
+        const HR = FingerDirection.HorizontalRight, HL = FingerDirection.HorizontalLeft;
+        const DUR = FingerDirection.DiagonalUpRight, DUL = FingerDirection.DiagonalUpLeft;
+        const DDR = FingerDirection.DiagonalDownRight, DDL = FingerDirection.DiagonalDownLeft;
+        const T = Finger.Thumb, I = Finger.Index, M = Finger.Middle, R = Finger.Ring, P = Finger.Pinky;
+
+        function g(name) { return new GestureDescription(name); }
+
+        // A — fist, thumb rests on side of index finger
+        const A = g('A');
+        A.addCurl(T, NC, 1.0); A.addCurl(I, FC, 1.0); A.addCurl(M, FC, 1.0);
+        A.addCurl(R, FC, 1.0); A.addCurl(P, FC, 1.0);
+        A.addDirection(T, HR, 1.0); A.addDirection(T, HL, 0.9);
+
+        // B — four fingers straight up, thumb tucked across palm
+        const B = g('B');
+        B.addCurl(T, FC, 1.0);
+        B.addCurl(I, NC, 1.0); B.addCurl(M, NC, 1.0); B.addCurl(R, NC, 1.0); B.addCurl(P, NC, 1.0);
+        B.addDirection(I, VU, 1.0); B.addDirection(M, VU, 1.0); B.addDirection(R, VU, 1.0); B.addDirection(P, VU, 1.0);
+
+        // C — all fingers half-curled into C shape
+        const C = g('C');
+        C.addCurl(T, NC, 1.0);
+        C.addCurl(I, HC, 1.0); C.addCurl(M, HC, 1.0); C.addCurl(R, HC, 1.0); C.addCurl(P, HC, 1.0);
+        C.addDirection(I, DUR, 0.9); C.addDirection(I, VU, 0.7);
+
+        // D — index up, other fingers curl to meet thumb
+        const D = g('D');
+        D.addCurl(T, HC, 1.0);
+        D.addCurl(I, NC, 1.0); D.addDirection(I, VU, 1.0);
+        D.addCurl(M, FC, 1.0); D.addCurl(R, FC, 1.0); D.addCurl(P, FC, 1.0);
+
+        // E — all fingers half-curl bent down, thumb tucked under
+        const E = g('E');
+        E.addCurl(T, HC, 1.0);
+        E.addCurl(I, HC, 1.0); E.addCurl(M, HC, 1.0); E.addCurl(R, HC, 1.0); E.addCurl(P, HC, 1.0);
+        E.addDirection(I, DDR, 1.0); E.addDirection(I, DDL, 1.0);
+        E.addDirection(M, DDR, 0.9); E.addDirection(M, DDL, 0.9);
+
+        // F — thumb + index touch (circle), middle/ring/pinky up
+        const F = g('F');
+        F.addCurl(T, HC, 1.0);
+        F.addCurl(I, HC, 1.0); F.addDirection(I, DDR, 1.0); F.addDirection(I, DDL, 1.0);
+        F.addCurl(M, NC, 1.0); F.addCurl(R, NC, 1.0); F.addCurl(P, NC, 1.0);
+        F.addDirection(M, VU, 1.0); F.addDirection(R, VU, 1.0); F.addDirection(P, VU, 1.0);
+
+        // G — index points sideways, thumb out horizontal, rest curled
+        const G = g('G');
+        G.addCurl(T, NC, 1.0); G.addDirection(T, HR, 1.0); G.addDirection(T, HL, 0.9);
+        G.addCurl(I, NC, 1.0); G.addDirection(I, HR, 1.0); G.addDirection(I, HL, 0.9);
+        G.addCurl(M, FC, 1.0); G.addCurl(R, FC, 1.0); G.addCurl(P, FC, 1.0);
+
+        // H — index + middle extended horizontally side by side
+        const H = g('H');
+        H.addCurl(T, FC, 0.9);
+        H.addCurl(I, NC, 1.0); H.addDirection(I, HR, 1.0); H.addDirection(I, HL, 0.9);
+        H.addCurl(M, NC, 1.0); H.addDirection(M, HR, 1.0); H.addDirection(M, HL, 0.9);
+        H.addCurl(R, FC, 1.0); H.addCurl(P, FC, 1.0);
+
+        // I — only pinky extended up
+        const Isign = g('I');
+        Isign.addCurl(T, FC, 1.0);
+        Isign.addCurl(I, FC, 1.0); Isign.addCurl(M, FC, 1.0); Isign.addCurl(R, FC, 1.0);
+        Isign.addCurl(P, NC, 1.0); Isign.addDirection(P, VU, 1.0);
+
+        // K — index up, middle half-curl diagonal, thumb between them pointing up
+        const K = g('K');
+        K.addCurl(T, NC, 1.0); K.addDirection(T, VU, 0.9); K.addDirection(T, DUR, 0.8);
+        K.addCurl(I, NC, 1.0); K.addDirection(I, VU, 1.0);
+        K.addCurl(M, HC, 1.0); K.addDirection(M, DUR, 0.9);
+        K.addCurl(R, FC, 1.0); K.addCurl(P, FC, 1.0);
+
+        // L — index up, thumb out to the side forming an L
+        const L = g('L');
+        L.addCurl(T, NC, 1.0); L.addDirection(T, HR, 1.0); L.addDirection(T, HL, 0.9);
+        L.addCurl(I, NC, 1.0); L.addDirection(I, VU, 1.0);
+        L.addCurl(M, FC, 1.0); L.addCurl(R, FC, 1.0); L.addCurl(P, FC, 1.0);
+
+        // M — three fingers (index/middle/ring) folded over thumb
+        const Msign = g('M');
+        Msign.addCurl(T, HC, 1.0);
+        Msign.addCurl(I, FC, 1.0); Msign.addDirection(I, VD, 0.9);
+        Msign.addCurl(M, FC, 1.0); Msign.addDirection(M, VD, 0.9);
+        Msign.addCurl(R, FC, 1.0); Msign.addDirection(R, VD, 0.8);
+        Msign.addCurl(P, NC, 1.0); Msign.addDirection(P, VU, 0.7);
+
+        // N — two fingers (index/middle) folded over thumb
+        const N = g('N');
+        N.addCurl(T, HC, 1.0);
+        N.addCurl(I, FC, 1.0); N.addDirection(I, VD, 0.9);
+        N.addCurl(M, FC, 1.0); N.addDirection(M, VD, 0.9);
+        N.addCurl(R, NC, 0.9); N.addCurl(P, NC, 0.9);
+
+        // O — all fingers curved into O shape, tips near thumb tip
+        const O = g('O');
+        O.addCurl(T, HC, 1.0);
+        O.addCurl(I, HC, 1.0); O.addCurl(M, HC, 1.0); O.addCurl(R, HC, 1.0); O.addCurl(P, HC, 1.0);
+        O.addDirection(I, DDR, 0.9); O.addDirection(I, DDL, 0.9);
+        O.addDirection(M, DDR, 0.8); O.addDirection(P, VU, 0.6);
+
+        // P — like K pointing downward
+        const Psign = g('P');
+        Psign.addCurl(T, NC, 1.0); Psign.addDirection(T, VD, 0.9);
+        Psign.addCurl(I, NC, 1.0); Psign.addDirection(I, VD, 1.0);
+        Psign.addCurl(M, HC, 1.0);
+        Psign.addCurl(R, FC, 1.0); Psign.addCurl(P, FC, 1.0);
+
+        // Q — like G pointing downward
+        const Q = g('Q');
+        Q.addCurl(T, NC, 1.0); Q.addDirection(T, VD, 0.9);
+        Q.addCurl(I, NC, 1.0); Q.addDirection(I, VD, 1.0);
+        Q.addCurl(M, FC, 1.0); Q.addCurl(R, FC, 1.0); Q.addCurl(P, FC, 1.0);
+
+        // R — index + middle crossed (middle overlaps index)
+        const Rsign = g('R');
+        Rsign.addCurl(T, FC, 1.0);
+        Rsign.addCurl(I, NC, 1.0); Rsign.addDirection(I, VU, 1.0);
+        Rsign.addCurl(M, NC, 1.0); Rsign.addDirection(M, DUL, 1.0);
+        Rsign.addCurl(R, FC, 1.0); Rsign.addCurl(P, FC, 1.0);
+
+        // S — fist with thumb resting over the top of the curled fingers
+        const S = g('S');
+        S.addCurl(T, HC, 1.0); S.addDirection(T, HR, 0.9); S.addDirection(T, HL, 0.9);
+        S.addCurl(I, FC, 1.0); S.addDirection(I, VD, 0.9);
+        S.addCurl(M, FC, 1.0); S.addDirection(M, VD, 0.9);
+        S.addCurl(R, FC, 1.0); S.addCurl(P, FC, 1.0);
+
+        // T — thumb tip tucked between index and middle fingers
+        const Tsign = g('T');
+        Tsign.addCurl(T, HC, 1.0); Tsign.addDirection(T, VU, 1.0); Tsign.addDirection(T, DUR, 0.8);
+        Tsign.addCurl(I, FC, 1.0); Tsign.addCurl(M, FC, 1.0);
+        Tsign.addCurl(R, FC, 1.0); Tsign.addCurl(P, FC, 1.0);
+
+        // U — index + middle together pointing up
+        const U = g('U');
+        U.addCurl(T, FC, 1.0);
+        U.addCurl(I, NC, 1.0); U.addDirection(I, VU, 1.0);
+        U.addCurl(M, NC, 1.0); U.addDirection(M, VU, 1.0);
+        U.addCurl(R, FC, 1.0); U.addCurl(P, FC, 1.0);
+
+        // V — index + middle spread apart (peace sign)
+        const V = g('V');
+        V.addCurl(T, FC, 1.0);
+        V.addCurl(I, NC, 1.0); V.addDirection(I, VU, 1.0);
+        V.addCurl(M, NC, 1.0); V.addDirection(M, VU, 1.0); V.addDirection(M, DUR, 0.8);
+        V.addCurl(R, FC, 1.0); V.addCurl(P, FC, 1.0);
+
+        // W — index + middle + ring all up and spread
+        const W = g('W');
+        W.addCurl(T, FC, 1.0);
+        W.addCurl(I, NC, 1.0); W.addDirection(I, VU, 1.0);
+        W.addCurl(M, NC, 1.0); W.addDirection(M, VU, 1.0);
+        W.addCurl(R, NC, 1.0); W.addDirection(R, VU, 1.0);
+        W.addCurl(P, FC, 1.0);
+
+        // X — index finger hooked (half-curl), others closed
+        const X = g('X');
+        X.addCurl(T, FC, 1.0);
+        X.addCurl(I, HC, 1.0); X.addDirection(I, VU, 1.0); X.addDirection(I, DUR, 0.9);
+        X.addCurl(M, FC, 1.0); X.addCurl(R, FC, 1.0); X.addCurl(P, FC, 1.0);
+
+        // Y — thumb + pinky extended, other three curled
+        const Y = g('Y');
+        Y.addCurl(T, NC, 1.0); Y.addDirection(T, HR, 1.0); Y.addDirection(T, HL, 0.9);
+        Y.addCurl(I, FC, 1.0); Y.addCurl(M, FC, 1.0); Y.addCurl(R, FC, 1.0);
+        Y.addCurl(P, NC, 1.0); Y.addDirection(P, VU, 1.0);
+
+        return [A, B, C, D, E, F, G, H, Isign, K, L, Msign, N, O, Psign, Q, Rsign, S, Tsign, U, V, W, X, Y];
+    }
+
+    function updateHold(letter, score) {
+        const holdArc = document.getElementById('holdArc');
+        const circumference = 94.25;
+        if (!letter || score < SCORE_THRESHOLD) {
+            holdLetter = null; holdStart = 0;
+            holdArc.setAttribute('stroke-dasharray', `0 ${circumference}`);
+            return;
+        }
+        if (letter !== holdLetter) { holdLetter = letter; holdStart = performance.now(); }
+        const progress = Math.min((performance.now() - holdStart) / HOLD_MS, 1);
+        holdArc.setAttribute('stroke-dasharray', `${progress * circumference} ${circumference}`);
+        if (progress >= 1) {
+            sentence += letter;
+            document.getElementById('sentenceText').textContent = sentence || '\u00a0';
+            holdLetter = null; holdStart = 0;
+            holdArc.setAttribute('stroke-dasharray', `0 ${circumference}`);
+        }
+    }
+
+    function addSpace()      { sentence += ' '; document.getElementById('sentenceText').textContent = sentence || '\u00a0'; }
+    function backspace()     { sentence = sentence.slice(0, -1); document.getElementById('sentenceText').textContent = sentence || '\u00a0'; }
+    function clearSentence() { sentence = ''; document.getElementById('sentenceText').textContent = '\u00a0'; }
+
+    function setFingerUI(states) {
+        ['thumb','index','middle','ring','pinky'].forEach(f => {
+            document.getElementById('f-' + f).classList.toggle('up', !!states[f]);
+        });
+    }
+
+    async function startCamera() {
+        try {
+            setStatus('Requesting camera...');
+            stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+            video.srcObject = stream;
+            await new Promise(r => video.onloadedmetadata = r);
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = '';
+            setStatus('Loading model...');
+
+            hands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.5 });
+            hands.onResults(onResults);
+            await hands.initialize();
+
+            gestureEstimator = new fp.GestureEstimator(buildGestures());
+            setStatus('Tracking...');
+            processLoop();
+        } catch (e) {
+            setStatus('Error: ' + e.message);
+        }
+    }
+
+    function stopCamera() {
+        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+        if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        video.srcObject = null;
+        document.getElementById('startBtn').style.display = '';
+        document.getElementById('stopBtn').style.display = 'none';
+        document.getElementById('letterDisplay').textContent = '—';
+        document.getElementById('letterLabel').textContent = 'No hand detected';
+        document.getElementById('confBar').style.width = '0%';
+        updateHold(null, 0);
+        setFingerUI({});
+        setStatus('Camera off');
+    }
+
+    async function processLoop() {
+        if (!stream) return;
+        if (video.readyState >= 2) await hands.send({ image: video });
+        animFrame = requestAnimationFrame(processLoop);
+    }
+
+    function onResults(results) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (!results.multiHandLandmarks?.length) {
+            document.getElementById('letterDisplay').textContent = '—';
+            document.getElementById('letterLabel').textContent = 'No hand in frame';
+            document.getElementById('confBar').style.width = '0%';
+            updateHold(null, 0);
+            setFingerUI({});
+            return;
+        }
+
+        const landmarks = results.multiHandLandmarks[0];
+
+        HAND_CONNECTIONS.forEach(([a, b]) => {
+            const lA = landmarks[a], lB = landmarks[b];
+            ctx.beginPath();
+            ctx.moveTo(lA.x * canvas.width, lA.y * canvas.height);
+            ctx.lineTo(lB.x * canvas.width, lB.y * canvas.height);
+            ctx.strokeStyle = 'rgba(100,180,255,0.8)'; ctx.lineWidth = 2; ctx.stroke();
+        });
+        landmarks.forEach((lm, idx) => {
+            const x = lm.x * canvas.width, y = lm.y * canvas.height;
+            const isTip = FINGER_TIPS.includes(idx);
+            ctx.beginPath(); ctx.arc(x, y, isTip ? 7 : 4, 0, 2 * Math.PI);
+            ctx.fillStyle = isTip ? 'rgba(255,120,80,0.95)' : 'rgba(255,255,255,0.9)'; ctx.fill();
+            ctx.strokeStyle = isTip ? 'rgba(200,60,30,0.9)' : 'rgba(100,150,220,0.8)';
+            ctx.lineWidth = 1.5; ctx.stroke();
+        });
+
+        // Convert landmarks to array format fingerpose expects
+        const lmArray = landmarks.map(lm => [lm.x, lm.y, lm.z]);
+        const est = gestureEstimator.estimate(lmArray, SCORE_THRESHOLD);
+
+        let letter = '?', labelText = 'Unrecognized', confPct = 0, bestScore = 0;
+
+        if (est.gestures.length > 0) {
+            const best = est.gestures.reduce((a, b) => a.score > b.score ? a : b);
+            letter    = best.name;
+            bestScore = best.score;
+            confPct   = Math.round((best.score / 10) * 100);
+            labelText = `${letter}  —  score ${best.score.toFixed(1)} / 10`;
+        }
+
+        document.getElementById('letterDisplay').textContent = letter;
+        document.getElementById('letterLabel').textContent   = labelText;
+        document.getElementById('confBar').style.width       = confPct + '%';
+
+        // Use poseData for finger state indicators
+        if (est.poseData?.length === 5) {
+            const NC = fp.FingerCurl.NoCurl;
+            const [th, id, mi, ri, pi] = est.poseData;
+            setFingerUI({ thumb: th[1] === NC, index: id[1] === NC, middle: mi[1] === NC, ring: ri[1] === NC, pinky: pi[1] === NC });
+        }
+
+        // Overlay letter label on canvas
+        const wrist = landmarks[0];
+        const px = wrist.x * canvas.width, py = wrist.y * canvas.height;
+        ctx.font = 'bold 28px sans-serif';
+        ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+        ctx.strokeText(letter, px + 10, py - 10);
+        ctx.fillStyle = 'rgba(123,184,248,0.95)';
+        ctx.fillText(letter, px + 10, py - 10);
+
+        updateHold(letter !== '?' ? letter : null, bestScore);
+    }
+</script>
 </body>
 </html>
