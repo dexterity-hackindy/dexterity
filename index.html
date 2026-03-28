@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hand Tracking</title>
+    <title>ASL Hand Tracking</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: sans-serif; background: #111; color: #eee; padding: 1.5rem; }
@@ -15,7 +15,17 @@
         }
         button:hover { background: #333; }
         #statusMsg { font-size: 13px; color: #aaa; }
-        .video-wrapper { position: relative; display: inline-block; width: 100%; max-width: 640px; }
+
+        .main-layout {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            max-width: 960px;
+        }
+
+        .video-col { flex: 0 0 auto; width: 480px; }
+
+        .video-wrapper { position: relative; display: inline-block; width: 100%; }
         video {
             width: 100%; border-radius: 10px; border: 1px solid #333;
             display: block; transform: scaleX(-1);
@@ -25,24 +35,153 @@
             width: 100%; height: 100%;
             border-radius: 10px; transform: scaleX(-1);
         }
-        .stats {
-            margin-top: 1rem;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            max-width: 640px;
+
+        .asl-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 0;
         }
-        .card {
-            background: #1e1e1e; border-radius: 8px; padding: 12px 14px;
+
+        .letter-card {
+            background: #1e1e1e;
             border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
         }
-        .card-label { font-size: 12px; color: #888; margin-bottom: 4px; }
-        .card-value { font-size: 18px; font-weight: 500; }
-        #landmarkInfo { margin-top: 0.75rem; font-size: 13px; color: #888; min-height: 20px; }
+
+        .letter-display {
+            font-size: 96px;
+            font-weight: 600;
+            line-height: 1.1;
+            color: #7bb8f8;
+            min-height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: -2px;
+        }
+
+        .letter-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+
+        .confidence-bar-wrap {
+            background: #333;
+            border-radius: 4px;
+            height: 4px;
+            margin: 10px 0 4px;
+            overflow: hidden;
+        }
+        .confidence-bar {
+            height: 100%;
+            background: #7bb8f8;
+            border-radius: 4px;
+            transition: width 0.15s ease;
+            width: 0%;
+        }
+
+        .hold-ring-wrap {
+            display: flex;
+            justify-content: center;
+            margin: 4px 0;
+        }
+        .hold-ring {
+            width: 36px;
+            height: 36px;
+        }
+
+        .sentence-card {
+            background: #1e1e1e;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 14px;
+        }
+        .sentence-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .sentence-text {
+            font-size: 20px;
+            min-height: 30px;
+            color: #eee;
+            word-break: break-all;
+            letter-spacing: 2px;
+        }
+        .sentence-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .sentence-actions button {
+            font-size: 13px;
+            padding: 6px 14px;
+        }
+
+        .finger-card {
+            background: #1e1e1e;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 14px;
+        }
+        .finger-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .finger-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .finger-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .finger-name { font-size: 10px; color: #555; }
+        .finger-pip {
+            width: 18px;
+            height: 22px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            background: #2a2a2a;
+            transition: background 0.1s;
+        }
+        .finger-pip.up { background: #7bb8f8; border-color: #5a9ae0; }
+
+        .hint-card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 12px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .hint-card strong { color: #888; font-weight: 500; }
+
+        @media (max-width: 720px) {
+            .main-layout { flex-direction: column; }
+            .video-col { width: 100%; }
+        }
     </style>
 </head>
 <body>
-<h1>Hand Tracking</h1>
+<h1>ASL Fingerspelling — Hand Tracking</h1>
 
 <div class="controls">
     <button id="startBtn" onclick="startCamera()">Start camera</button>
@@ -50,25 +189,72 @@
     <span id="statusMsg">Camera off</span>
 </div>
 
-<div class="video-wrapper">
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="overlay"></canvas>
-</div>
-
-<div id="landmarkInfo"></div>
-
-<div class="stats">
-    <div class="card">
-        <div class="card-label">Hands detected</div>
-        <div class="card-value" id="handCount">—</div>
+<div class="main-layout">
+    <div class="video-col">
+        <div class="video-wrapper">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="overlay"></canvas>
+        </div>
     </div>
-    <div class="card">
-        <div class="card-label">Index finger tip (x, y)</div>
-        <div class="card-value" style="font-size:14px;" id="indexPos">—</div>
-    </div>
-    <div class="card">
-        <div class="card-label">Wrist position (x, y)</div>
-        <div class="card-value" style="font-size:14px;" id="wristPos">—</div>
+
+    <div class="asl-col">
+        <div class="letter-card">
+            <div class="letter-display" id="letterDisplay">—</div>
+            <div class="confidence-bar-wrap">
+                <div class="confidence-bar" id="confBar"></div>
+            </div>
+            <div class="letter-label" id="letterLabel">No hand detected</div>
+            <div class="hold-ring-wrap">
+                <svg class="hold-ring" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="15" fill="none" stroke="#333" stroke-width="3"/>
+                    <circle id="holdArc" cx="18" cy="18" r="15" fill="none" stroke="#7bb8f8"
+                            stroke-width="3" stroke-dasharray="0 94.25"
+                            stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                </svg>
+            </div>
+            <div class="letter-label">Hold still to add letter</div>
+        </div>
+
+        <div class="sentence-card">
+            <div class="sentence-label">Sentence builder</div>
+            <div class="sentence-text" id="sentenceText">&nbsp;</div>
+            <div class="sentence-actions">
+                <button onclick="addSpace()">Space</button>
+                <button onclick="backspace()">Delete</button>
+                <button onclick="clearSentence()">Clear</button>
+            </div>
+        </div>
+
+        <div class="finger-card">
+            <div class="finger-label">Finger states</div>
+            <div class="finger-row">
+                <div class="finger-col">
+                    <div class="finger-pip" id="f-thumb"></div>
+                    <div class="finger-name">Thumb</div>
+                </div>
+                <div class="finger-col">
+                    <div class="finger-pip" id="f-index"></div>
+                    <div class="finger-name">Index</div>
+                </div>
+                <div class="finger-col">
+                    <div class="finger-pip" id="f-middle"></div>
+                    <div class="finger-name">Middle</div>
+                </div>
+                <div class="finger-col">
+                    <div class="finger-pip" id="f-ring"></div>
+                    <div class="finger-name">Ring</div>
+                </div>
+                <div class="finger-col">
+                    <div class="finger-pip" id="f-pinky"></div>
+                    <div class="finger-name">Pinky</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hint-card">
+            <strong>Tips:</strong> Face your palm toward the camera. Sign letters clearly and hold for 1.5s to add to the sentence. Supports A–Z fingerspelling.<br><br>
+            <strong>Best letters:</strong> A, B, C, D, F, I, L, O, S, U, V, W, Y and numbers 1–5.
+        </div>
     </div>
 </div>
 
@@ -79,6 +265,12 @@
     let stream = null;
     let animFrame = null;
     let hands = null;
+    let sentence = '';
+
+    // Hold-to-confirm state
+    let holdLetter = null;
+    let holdStart = 0;
+    const HOLD_MS = 1500;
 
     const video = document.getElementById('video');
     const canvas = document.getElementById('overlay');
@@ -92,11 +284,158 @@
         [13,17],[17,18],[18,19],[19,20],
         [0,17]
     ];
-
     const FINGER_TIPS = [4, 8, 12, 16, 20];
 
-    function setStatus(msg) {
-        document.getElementById('statusMsg').textContent = msg;
+    function setStatus(msg) { document.getElementById('statusMsg').textContent = msg; }
+
+    function dist3d(a, b) {
+        return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2 + (a.z-b.z)**2);
+    }
+
+    function recognizeASL(lm) {
+        const palmSize = dist3d(lm[0], lm[9]) || 0.001;
+
+        // Finger extended: tip is above (lower y) than the PIP joint
+        const indexUp  = lm[8].y  < lm[6].y;
+        const middleUp = lm[12].y < lm[10].y;
+        const ringUp   = lm[16].y < lm[14].y;
+        const pinkyUp  = lm[20].y < lm[18].y;
+
+        // Finger curled into palm: tip below the MCP
+        const indexCurled  = lm[8].y  > lm[5].y;
+        const middleCurled = lm[12].y > lm[9].y;
+        const ringCurled   = lm[16].y > lm[13].y;
+        const pinkyCurled  = lm[20].y > lm[17].y;
+
+        // Thumb: extended if tip is far from index MCP
+        const thumbDist = dist3d(lm[4], lm[5]);
+        const thumbUp = thumbDist > palmSize * 0.45;
+
+        // Thumb bent across palm: tip near ring/middle base
+        const thumbAcross = dist3d(lm[4], lm[13]) < palmSize * 0.4;
+
+        // Tip-to-tip distances (normalized)
+        const thIdx   = dist3d(lm[4], lm[8])  / palmSize;
+        const thMid   = dist3d(lm[4], lm[12]) / palmSize;
+        const thRing  = dist3d(lm[4], lm[16]) / palmSize;
+        const thPinky = dist3d(lm[4], lm[20]) / palmSize;
+
+        const idxMidSpread  = dist3d(lm[8], lm[12])  / palmSize;
+        const midRingSpread = dist3d(lm[12], lm[16]) / palmSize;
+
+        // Fingers bent but not fully curled (half-curl for C/O shapes)
+        const indexHalfCurl  = !indexUp  && !indexCurled;
+        const middleHalfCurl = !middleUp && !middleCurled;
+        const ringHalfCurl   = !ringUp   && !ringCurled;
+        const pinkyHalfCurl  = !pinkyUp  && !pinkyCurled;
+
+        const I = indexUp, M = middleUp, R = ringUp, Pi = pinkyUp, Th = thumbUp;
+
+        // 5 / open hand
+        if (I && M && R && Pi && Th) return { letter: '5', desc: 'Open hand / 5', conf: 90 };
+
+        // B: four fingers up, thumb tucked
+        if (I && M && R && Pi && !Th) return { letter: 'B', desc: 'B — four fingers up', conf: 85 };
+
+        // W / 3 (index+middle+ring up)
+        if (I && M && R && !Pi && !Th) return { letter: 'W', desc: 'W — three fingers', conf: 80 };
+
+        // Thumb + 4 fingers (thumb + index + middle + ring)
+        if (I && M && R && !Pi && Th) return { letter: '4+', desc: '4 fingers + thumb', conf: 70 };
+
+        // Index + middle up
+        if (I && M && !R && !Pi) {
+            if (idxMidSpread > 0.55) return { letter: 'V', desc: 'V — spread apart', conf: 82 };
+            if (Th && thMid < 0.5)   return { letter: 'K', desc: 'K — thumb between', conf: 75 };
+            return { letter: 'U', desc: 'U — fingers together', conf: 78 };
+        }
+
+        // L: index + thumb out, rest down
+        if (I && !M && !R && !Pi && Th) return { letter: 'L', desc: 'L — index + thumb', conf: 88 };
+
+        // Index only
+        if (I && !M && !R && !Pi && !Th) return { letter: 'D', desc: 'D — index up', conf: 78 };
+
+        // Pinky only
+        if (!I && !M && !R && Pi && !Th) return { letter: 'I', desc: 'I — pinky up', conf: 88 };
+
+        // Thumb + pinky (Y)
+        if (!I && !M && !R && Pi && Th) return { letter: 'Y', desc: 'Y — thumb + pinky', conf: 88 };
+
+        // Middle + ring + pinky (no index)
+        if (!I && M && R && Pi && !Th) return { letter: '3-', desc: 'Fingers 2-4', conf: 60 };
+
+        // F: thumb and index form circle, middle/ring/pinky up
+        if (!I && M && R && Pi && thIdx < 0.35) return { letter: 'F', desc: 'F — thumb-index circle', conf: 80 };
+
+        // P: like K pointing down (index+middle down toward palm)
+        if (!I && !M && !R && !Pi) {
+            // Fist variants — thumb position tells us more
+            if (Th) {
+                // Thumb out to side = A
+                return { letter: 'A', desc: 'A — thumb to side', conf: 72 };
+            }
+            if (thumbAcross) {
+                return { letter: 'S', desc: 'S — thumb over fist', conf: 72 };
+            }
+            return { letter: 'E', desc: 'E / N / M — fist variant', conf: 55 };
+        }
+
+        // O: all fingers curved toward thumb tip
+        const allHalfCurl = indexHalfCurl && middleHalfCurl && ringHalfCurl && pinkyHalfCurl;
+        if (allHalfCurl && thIdx < 0.5) return { letter: 'O', desc: 'O — rounded hand', conf: 72 };
+
+        // C: curved open hand
+        if (indexHalfCurl && middleHalfCurl && ringHalfCurl && pinkyHalfCurl && Th) {
+            return { letter: 'C', desc: 'C — curved hand', conf: 68 };
+        }
+
+        // Ring + pinky up
+        if (!I && !M && R && Pi) return { letter: '?', desc: 'Unrecognized', conf: 20 };
+
+        return { letter: '?', desc: 'Unrecognized', conf: 0 };
+    }
+
+    function updateHold(letter) {
+        const holdArc = document.getElementById('holdArc');
+        const circumference = 2 * Math.PI * 15; // 94.25
+
+        if (!letter || letter === '?') {
+            holdLetter = null;
+            holdStart = 0;
+            holdArc.setAttribute('stroke-dasharray', `0 ${circumference}`);
+            return;
+        }
+
+        if (letter !== holdLetter) {
+            holdLetter = letter;
+            holdStart = performance.now();
+        }
+
+        const elapsed = performance.now() - holdStart;
+        const progress = Math.min(elapsed / HOLD_MS, 1);
+        holdArc.setAttribute('stroke-dasharray', `${progress * circumference} ${circumference}`);
+
+        if (progress >= 1) {
+            // Add letter to sentence
+            sentence += letter;
+            document.getElementById('sentenceText').textContent = sentence || '\u00a0';
+            holdLetter = null;
+            holdStart = 0;
+            holdArc.setAttribute('stroke-dasharray', `0 ${circumference}`);
+        }
+    }
+
+    function addSpace() { sentence += ' '; document.getElementById('sentenceText').textContent = sentence || '\u00a0'; }
+    function backspace() { sentence = sentence.slice(0, -1); document.getElementById('sentenceText').textContent = sentence || '\u00a0'; }
+    function clearSentence() { sentence = ''; document.getElementById('sentenceText').textContent = '\u00a0'; }
+
+    function setFingerUI(states) {
+        ['thumb','index','middle','ring','pinky'].forEach(f => {
+            const el = document.getElementById('f-' + f);
+            if (states[f]) el.classList.add('up');
+            else el.classList.remove('up');
+        });
     }
 
     async function startCamera() {
@@ -112,18 +451,10 @@
             document.getElementById('stopBtn').style.display = '';
             setStatus('Loading model...');
 
-            hands = new Hands({
-                locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
-            });
-            hands.setOptions({
-                maxNumHands: 2,
-                modelComplexity: 1,
-                minDetectionConfidence: 0.7,
-                minTrackingConfidence: 0.5
-            });
+            hands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.5 });
             hands.onResults(onResults);
             await hands.initialize();
-
             setStatus('Tracking...');
             processLoop();
         } catch (e) {
@@ -138,18 +469,17 @@
         video.srcObject = null;
         document.getElementById('startBtn').style.display = '';
         document.getElementById('stopBtn').style.display = 'none';
-        document.getElementById('handCount').textContent = '—';
-        document.getElementById('indexPos').textContent = '—';
-        document.getElementById('wristPos').textContent = '—';
-        document.getElementById('landmarkInfo').textContent = '';
+        document.getElementById('letterDisplay').textContent = '—';
+        document.getElementById('letterLabel').textContent = 'No hand detected';
+        document.getElementById('confBar').style.width = '0%';
+        updateHold(null);
+        setFingerUI({ thumb:false, index:false, middle:false, ring:false, pinky:false });
         setStatus('Camera off');
     }
 
     async function processLoop() {
         if (!stream) return;
-        if (video.readyState >= 2) {
-            await hands.send({ image: video });
-        }
+        if (video.readyState >= 2) await hands.send({ image: video });
         animFrame = requestAnimationFrame(processLoop);
     }
 
@@ -158,63 +488,77 @@
         canvas.height = video.videoHeight;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        const detected = results.multiHandLandmarks ? results.multiHandLandmarks.length : 0;
-        document.getElementById('handCount').textContent = detected;
+        const detected = results.multiHandLandmarks?.length || 0;
 
         if (!detected) {
-            document.getElementById('indexPos').textContent = '—';
-            document.getElementById('wristPos').textContent = '—';
-            document.getElementById('landmarkInfo').textContent = 'No hands in frame';
+            document.getElementById('letterDisplay').textContent = '—';
+            document.getElementById('letterLabel').textContent = 'No hand in frame';
+            document.getElementById('confBar').style.width = '0%';
+            updateHold(null);
+            setFingerUI({ thumb:false, index:false, middle:false, ring:false, pinky:false });
             return;
         }
 
-        results.multiHandLandmarks.forEach((landmarks, i) => {
-            const label = results.multiHandedness?.[i]?.label || 'Hand';
+        const landmarks = results.multiHandLandmarks[0];
 
-            // Draw connections
-            HAND_CONNECTIONS.forEach(([a, b]) => {
-                const lA = landmarks[a], lB = landmarks[b];
-                ctx.beginPath();
-                ctx.moveTo(lA.x * canvas.width, lA.y * canvas.height);
-                ctx.lineTo(lB.x * canvas.width, lB.y * canvas.height);
-                ctx.strokeStyle = 'rgba(100, 180, 255, 0.8)';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            });
-
-            // Draw landmarks
-            landmarks.forEach((lm, idx) => {
-                const x = lm.x * canvas.width;
-                const y = lm.y * canvas.height;
-                const isTip = FINGER_TIPS.includes(idx);
-                ctx.beginPath();
-                ctx.arc(x, y, isTip ? 7 : 4, 0, 2 * Math.PI);
-                ctx.fillStyle = isTip ? 'rgba(255, 120, 80, 0.95)' : 'rgba(255, 255, 255, 0.9)';
-                ctx.fill();
-                ctx.strokeStyle = isTip ? 'rgba(200, 60, 30, 0.9)' : 'rgba(100, 150, 220, 0.8)';
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-            });
-
-            // Draw hand label
-            const wrist = landmarks[0];
-            ctx.font = '13px sans-serif';
-            ctx.fillStyle = 'rgba(255,255,255,0.95)';
-            ctx.fillText(label, wrist.x * canvas.width + 8, wrist.y * canvas.height - 6);
-
-            // Update stat cards for first hand
-            if (i === 0) {
-                const idx8 = landmarks[8];
-                const wx = Math.round(wrist.x * 100) / 100;
-                const wy = Math.round(wrist.y * 100) / 100;
-                const ix = Math.round(idx8.x * 100) / 100;
-                const iy = Math.round(idx8.y * 100) / 100;
-                document.getElementById('indexPos').textContent = `${ix}, ${iy}`;
-                document.getElementById('wristPos').textContent = `${wx}, ${wy}`;
-                document.getElementById('landmarkInfo').textContent =
-                    `Tracking ${detected} hand${detected > 1 ? 's' : ''} — 21 landmarks each`;
-            }
+        // Draw skeleton
+        HAND_CONNECTIONS.forEach(([a, b]) => {
+            const lA = landmarks[a], lB = landmarks[b];
+            ctx.beginPath();
+            ctx.moveTo(lA.x * canvas.width, lA.y * canvas.height);
+            ctx.lineTo(lB.x * canvas.width, lB.y * canvas.height);
+            ctx.strokeStyle = 'rgba(100, 180, 255, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
         });
+
+        landmarks.forEach((lm, idx) => {
+            const x = lm.x * canvas.width;
+            const y = lm.y * canvas.height;
+            const isTip = FINGER_TIPS.includes(idx);
+            ctx.beginPath();
+            ctx.arc(x, y, isTip ? 7 : 4, 0, 2 * Math.PI);
+            ctx.fillStyle = isTip ? 'rgba(255, 120, 80, 0.95)' : 'rgba(255, 255, 255, 0.9)';
+            ctx.fill();
+            ctx.strokeStyle = isTip ? 'rgba(200, 60, 30, 0.9)' : 'rgba(100, 150, 220, 0.8)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        });
+
+        // Recognize
+        const result = recognizeASL(landmarks);
+        const letterEl = document.getElementById('letterDisplay');
+        const labelEl  = document.getElementById('letterLabel');
+        const confBar  = document.getElementById('confBar');
+
+        letterEl.textContent = result.letter;
+        labelEl.textContent = result.desc;
+        confBar.style.width = result.conf + '%';
+
+        // Finger state display
+        const palmSize = dist3d(landmarks[0], landmarks[9]) || 0.001;
+        const thumbDist = dist3d(landmarks[4], landmarks[5]);
+        setFingerUI({
+            thumb:  thumbDist > palmSize * 0.45,
+            index:  landmarks[8].y  < landmarks[6].y,
+            middle: landmarks[12].y < landmarks[10].y,
+            ring:   landmarks[16].y < landmarks[14].y,
+            pinky:  landmarks[20].y < landmarks[18].y
+        });
+
+        // Draw recognized letter overlay
+        const wrist = landmarks[0];
+        const px = wrist.x * canvas.width;
+        const py = wrist.y * canvas.height;
+        ctx.font = 'bold 28px sans-serif';
+        ctx.fillStyle = 'rgba(123, 184, 248, 0.95)';
+        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+        ctx.lineWidth = 4;
+        ctx.strokeText(result.letter, px + 10, py - 10);
+        ctx.fillText(result.letter, px + 10, py - 10);
+
+        // Update hold progress (only confident letters)
+        updateHold(result.conf >= 65 ? result.letter : null);
     }
 </script>
 </body>
