@@ -67,6 +67,10 @@
         @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
         .sentence-actions{display:flex;gap:6px;margin-top:.75rem;flex-wrap:wrap;}
         .sentence-actions .btn{font-size:12px;padding:5px 12px;}
+        .btn.speak{border-color:rgba(124,255,212,.4);color:var(--accent);display:flex;align-items:center;gap:5px;}
+        .btn.speak:hover{background:rgba(124,255,212,.08);}
+        .btn.speak.speaking{background:rgba(124,255,212,.12);border-color:var(--accent);animation:speakPulse 1s ease-in-out infinite;}
+        @keyframes speakPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,255,212,.3);}50%{box-shadow:0 0 0 5px rgba(124,255,212,0);}}
         .train-panel{border:1px solid rgba(192,132,252,.25);border-radius:10px;padding:.75rem 1rem;background:rgba(192,132,252,.04);margin-top:.5rem;}
         .train-panel.hidden{display:none;}
         .train-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:.5rem;}
@@ -89,21 +93,197 @@
         .stat-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:2px;}
         .stat-value{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;}
         .ref-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;}
-        .ref-cell{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 4px;text-align:center;transition:all .15s;}
+        .ref-cell{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 4px;text-align:center;transition:all .15s;cursor:pointer;position:relative;}
+        .ref-cell:hover{background:rgba(124,255,212,.07);border-color:rgba(124,255,212,.3);transform:translateY(-1px);}
         .ref-cell.active{background:rgba(124,255,212,.1);border-color:var(--accent);}
         .ref-cell.mot-cell{border-color:rgba(255,209,102,.2);}
+        .ref-cell.mot-cell:hover{background:rgba(255,209,102,.07);border-color:rgba(255,209,102,.5);}
         .ref-cell.mot-cell.active{background:rgba(255,209,102,.1);border-color:var(--accent3);}
         .ref-cell.num-cell{border-color:rgba(192,132,252,.2);}
+        .ref-cell.num-cell:hover{background:rgba(192,132,252,.07);border-color:rgba(192,132,252,.5);}
         .ref-cell.num-cell.active{background:rgba(192,132,252,.1);border-color:var(--accent4);}
         .ref-letter{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
         .ref-cell.mot-cell .ref-letter{color:var(--accent3);}
         .ref-cell.num-cell .ref-letter{color:var(--accent4);}
         .ref-desc{font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);margin-top:1px;line-height:1.3;}
+        .ref-hint{font-family:'DM Mono',monospace;font-size:7px;color:rgba(124,255,212,.35);margin-top:2px;letter-spacing:.04em;}
+        .ref-cell.mot-cell .ref-hint{color:rgba(255,209,102,.35);}
+        .ref-cell.num-cell .ref-hint{color:rgba(192,132,252,.35);}
         .debug-panel{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);line-height:1.7;}
         .top-scores{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;}
         .sc{padding:2px 7px;border-radius:3px;background:var(--surface);border:1px solid var(--border);font-size:10px;}
         .sc.best{background:rgba(124,255,212,.12);border-color:var(--accent);color:var(--accent);}
         .sc.best-num{background:rgba(192,132,252,.12);border-color:var(--accent4);color:var(--accent4);}
+
+        /* ═══════════════════════════════════════════
+           DEXTER DIALOG
+        ═══════════════════════════════════════════ */
+        .dexter-backdrop{
+            position:fixed;inset:0;z-index:9000;
+            background:rgba(5,5,10,.75);
+            backdrop-filter:blur(6px);
+            display:flex;align-items:center;justify-content:center;
+            opacity:0;pointer-events:none;
+            transition:opacity .22s ease;
+        }
+        .dexter-backdrop.open{opacity:1;pointer-events:all;}
+
+        .dexter-dialog{
+            position:relative;
+            background:var(--card);
+            border:1px solid var(--border);
+            border-radius:18px;
+            width:min(500px,92vw);
+            padding:0;
+            overflow:hidden;
+            box-shadow:0 32px 80px rgba(0,0,0,.7),0 0 0 1px rgba(124,255,212,.06);
+            transform:translateY(18px) scale(.97);
+            transition:transform .25s cubic-bezier(.34,1.56,.64,1);
+        }
+        .dexter-backdrop.open .dexter-dialog{transform:none;}
+
+        .dexter-header{
+            display:flex;align-items:center;gap:14px;
+            padding:18px 20px 16px;
+            background:linear-gradient(135deg,rgba(124,255,212,.05) 0%,rgba(192,132,252,.05) 100%);
+            border-bottom:1px solid var(--border);
+        }
+
+        /* Avatar */
+        .dexter-avatar{
+            flex-shrink:0;
+            width:52px;height:52px;border-radius:50%;
+            background:linear-gradient(135deg,#0d2d24 0%,#1a1228 100%);
+            border:2px solid rgba(124,255,212,.3);
+            display:flex;align-items:center;justify-content:center;
+            position:relative;overflow:hidden;
+        }
+        .dexter-avatar::before{
+            content:'';position:absolute;inset:0;
+            background:radial-gradient(circle at 35% 35%,rgba(124,255,212,.15),transparent 60%);
+        }
+        .dexter-avatar-face{font-size:26px;position:relative;z-index:1;line-height:1;}
+        .dexter-avatar-pulse{
+            position:absolute;inset:-3px;border-radius:50%;
+            border:2px solid rgba(124,255,212,.2);
+            animation:avatarPulse 2.2s ease-in-out infinite;
+        }
+        @keyframes avatarPulse{
+            0%,100%{transform:scale(1);opacity:.6;}
+            50%{transform:scale(1.07);opacity:1;}
+        }
+
+        .dexter-header-text{}
+        .dexter-name{font-size:16px;font-weight:800;letter-spacing:-.2px;}
+        .dexter-name span{color:var(--accent);}
+        .dexter-tagline{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.06em;}
+
+        .dexter-sign-badge{
+            margin-left:auto;flex-shrink:0;
+            width:44px;height:44px;border-radius:10px;
+            display:flex;align-items:center;justify-content:center;
+            font-size:28px;font-weight:800;
+            border:1px solid;
+        }
+        .dexter-sign-badge.let{background:rgba(124,255,212,.08);border-color:rgba(124,255,212,.3);color:var(--accent);}
+        .dexter-sign-badge.mot{background:rgba(255,209,102,.08);border-color:rgba(255,209,102,.3);color:var(--accent3);}
+        .dexter-sign-badge.num{background:rgba(192,132,252,.08);border-color:rgba(192,132,252,.3);color:var(--accent4);}
+
+        .dexter-close{
+            position:absolute;top:14px;right:14px;
+            width:28px;height:28px;border-radius:50%;
+            background:rgba(255,255,255,.05);border:1px solid var(--border);
+            color:var(--muted);font-size:14px;line-height:1;
+            cursor:pointer;display:flex;align-items:center;justify-content:center;
+            transition:all .15s;
+        }
+        .dexter-close:hover{background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.4);color:var(--accent2);}
+
+        .dexter-body{padding:20px;}
+
+        /* Speech bubble */
+        .dexter-bubble{
+            background:var(--surface);
+            border:1px solid var(--border);
+            border-radius:4px 12px 12px 12px;
+            padding:14px 16px;
+            position:relative;
+            margin-bottom:16px;
+        }
+        .dexter-bubble::before{
+            content:'';position:absolute;top:-8px;left:16px;
+            width:0;height:0;
+            border-left:8px solid transparent;
+            border-right:8px solid transparent;
+            border-bottom:8px solid var(--border);
+        }
+        .dexter-bubble::after{
+            content:'';position:absolute;top:-6px;left:17px;
+            width:0;height:0;
+            border-left:7px solid transparent;
+            border-right:7px solid transparent;
+            border-bottom:7px solid var(--surface);
+        }
+        .dexter-bubble p{
+            font-family:'DM Mono',monospace;font-size:12.5px;
+            line-height:1.7;color:var(--text);
+        }
+        .dexter-bubble p + p{margin-top:10px;}
+        .dexter-bubble strong{color:var(--accent);font-weight:500;}
+        .dexter-bubble.mot-bubble strong{color:var(--accent3);}
+        .dexter-bubble.num-bubble strong{color:var(--accent4);}
+
+        /* Steps */
+        .dexter-steps{display:flex;flex-direction:column;gap:8px;}
+        .dexter-step{
+            display:flex;align-items:flex-start;gap:11px;
+            background:rgba(255,255,255,.02);
+            border:1px solid var(--border);
+            border-radius:9px;padding:10px 13px;
+            transition:background .15s;
+        }
+        .dexter-step:hover{background:rgba(124,255,212,.04);}
+        .step-num{
+            flex-shrink:0;
+            width:20px;height:20px;border-radius:50%;
+            background:rgba(124,255,212,.1);border:1px solid rgba(124,255,212,.3);
+            font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);
+            display:flex;align-items:center;justify-content:center;
+            margin-top:1px;
+        }
+        .step-num.mot{background:rgba(255,209,102,.1);border-color:rgba(255,209,102,.3);color:var(--accent3);}
+        .step-num.num{background:rgba(192,132,252,.1);border-color:rgba(192,132,252,.3);color:var(--accent4);}
+        .step-text{font-family:'DM Mono',monospace;font-size:11.5px;line-height:1.55;color:var(--text);}
+        .step-text em{color:var(--muted);font-style:normal;}
+
+        .dexter-tip{
+            margin-top:14px;
+            background:rgba(255,209,102,.05);
+            border:1px solid rgba(255,209,102,.15);
+            border-radius:8px;padding:9px 13px;
+            font-family:'DM Mono',monospace;font-size:11px;
+            color:var(--accent3);line-height:1.5;
+        }
+        .dexter-tip::before{content:'💡 ';opacity:.85;}
+
+        .dexter-footer{
+            padding:10px 20px 16px;
+            display:flex;justify-content:space-between;align-items:center;
+        }
+        .dexter-footer-note{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
+        .dexter-footer-note span{color:var(--accent4);}
+        .dexter-done-btn{
+            font-family:'Syne',sans-serif;font-size:12px;font-weight:700;
+            padding:7px 18px;border-radius:7px;
+            background:var(--accent);color:#000;border:none;
+            cursor:pointer;transition:all .15s;letter-spacing:.04em;
+        }
+        .dexter-done-btn:hover{background:#5de6ba;}
+        .dexter-done-btn.mot{background:var(--accent3);color:#000;}
+        .dexter-done-btn.mot:hover{background:#e8b84d;}
+        .dexter-done-btn.num{background:var(--accent4);color:#fff;}
+        .dexter-done-btn.num:hover{background:#a855f7;}
+
         @media(max-width:800px){.layout{grid-template-columns:1fr;}}
     </style>
 </head>
@@ -163,6 +343,9 @@
                     <button class="btn" onclick="deleteChar()">⌫</button>
                     <button class="btn" onclick="clearSentence()">Clear</button>
                     <button class="btn" onclick="copySentence()">Copy</button>
+                    <button class="btn speak" id="speakBtn" onclick="speakSentence()">
+                        <span id="speakIcon">🔊</span> Speak
+                    </button>
                 </div>
             </div>
 
@@ -218,6 +401,7 @@
                     Reference
                     <span style="color:var(--accent3);font-size:9px;margin-left:4px;">★ motion</span>
                     <span style="color:var(--accent4);font-size:9px;margin-left:4px;">◆ number</span>
+                    <span style="color:var(--muted);font-size:9px;margin-left:4px;">· click for help</span>
                 </div>
                 <div class="ref-grid" id="refGrid"></div>
             </div>
@@ -233,9 +417,458 @@
     </div>
 </div>
 
+<!-- ═══════════════════════════════════════════
+     DEXTER DIALOG
+════════════════════════════════════════════ -->
+<div class="dexter-backdrop" id="dexterBackdrop" onclick="closeDexterIfBackdrop(event)">
+    <div class="dexter-dialog" id="dexterDialog">
+        <div class="dexter-header">
+            <div class="dexter-avatar">
+                <div class="dexter-avatar-face">🤖</div>
+                <div class="dexter-avatar-pulse"></div>
+            </div>
+            <div class="dexter-header-text">
+                <div class="dexter-name">Meet <span>Dexter</span></div>
+                <div class="dexter-tagline">// your ASL hand-shape guide</div>
+            </div>
+            <div class="dexter-sign-badge let" id="dexterBadge">A</div>
+            <button class="dexter-close" onclick="closeDexter()">✕</button>
+        </div>
+        <div class="dexter-body" id="dexterBody">
+            <!-- filled by JS -->
+        </div>
+        <div class="dexter-footer">
+            <div class="dexter-footer-note">Tap a letter in <span>Reference</span> anytime</div>
+            <button class="dexter-done-btn let" id="dexterDoneBtn" onclick="closeDexter()">Got it!</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script>
+    /* ══════════════════════════════════════════════════════════════════
+       DEXTER — ASL hand-shape knowledge base
+    ══════════════════════════════════════════════════════════════════ */
+    var DEXTER_DATA = {
+        'A': {
+            type:'let',
+            intro:"Make a <strong>fist</strong> with your dominant hand — but keep the thumb resting on the side, not tucked inside.",
+            steps:[
+                "Curl all four fingers tightly into your palm.",
+                "Rest your thumb along the side of your index finger — <em>not across or inside the fist</em>.",
+                "Hold the fist upright, knuckles facing forward."
+            ],
+            tip:"Think of a solid 'thumbs neutral' fist — thumb visible on the side."
+        },
+        'B': {
+            type:'let',
+            intro:"Hold all four <strong>fingers straight up</strong> and close together, with the thumb folded across the palm.",
+            steps:[
+                "Extend all four fingers fully, pressing them together.",
+                "Bend your thumb across the palm — tucked beneath the fingers.",
+                "Keep the palm facing outward and fingers pointing up."
+            ],
+            tip:"Like showing someone a flat 'stop' — but thumb is folded in, not extended."
+        },
+        'C': {
+            type:'let',
+            intro:"Curve your hand into a <strong>C shape</strong>, like you're holding a cup.",
+            steps:[
+                "Extend all four fingers and bend them into a gentle arc.",
+                "Curve your thumb to mirror the same arc below.",
+                "Leave a rounded gap between thumb and fingers — the letter C shape."
+            ],
+            tip:"Imagine gripping the side of a large coffee mug."
+        },
+        'D': {
+            type:'let',
+            intro:"Point your <strong>index finger up</strong> while the other fingers touch the thumb tip in a circle.",
+            steps:[
+                "Extend your index finger straight up.",
+                "Curve your middle, ring, and pinky fingers down to touch your thumb.",
+                "The three fingers and thumb form a rounded circle on the lower portion."
+            ],
+            tip:"The circle at the bottom and the upright index make the shape of a 'D'."
+        },
+        'E': {
+            type:'let',
+            intro:"<strong>Curl all fingers</strong> forward and bring them down toward the thumb.",
+            steps:[
+                "Bend all four fingers forward at the second knuckle so the fingertips point downward.",
+                "Bring your thumb up slightly to meet the curled fingertips.",
+                "Keep a slight gap — fingers and thumb don't need to fully touch."
+            ],
+            tip:"Think of a gentle claw shape with all fingers bent over and thumb up."
+        },
+        'F': {
+            type:'let',
+            intro:"Touch your <strong>index finger to your thumb</strong> in a circle, with the other three fingers extended.",
+            steps:[
+                "Touch the tip of your index finger to the tip of your thumb, making an 'O' circle.",
+                "Extend your middle, ring, and pinky fingers upward and spread slightly.",
+                "Keep the circle open and round."
+            ],
+            tip:"Similar to the OK gesture, but with fingers spread more naturally upward."
+        },
+        'G': {
+            type:'let',
+            intro:"Point your <strong>index finger sideways</strong> (to the side), with thumb parallel to it — like aiming a gun sideways.",
+            steps:[
+                "Extend your index finger horizontally to the side.",
+                "Extend your thumb in the same horizontal direction, parallel below the index finger.",
+                "Curl the middle, ring, and pinky fingers into the palm.",
+                "Hold the shape sideways, not upright."
+            ],
+            tip:"Rotate a 'gun hand' so it points sideways rather than forward."
+        },
+        'H': {
+            type:'let',
+            intro:"Point your <strong>index and middle fingers together sideways</strong>, like a two-finger side-point.",
+            steps:[
+                "Extend your index and middle fingers together, horizontally to the side.",
+                "Keep those two fingers touching side by side.",
+                "Fold the ring and pinky fingers down, and tuck the thumb."
+            ],
+            tip:"Like the letter G, but with two fingers extended instead of one."
+        },
+        'I': {
+            type:'let',
+            intro:"Extend only your <strong>pinky finger</strong> upward — a solo pinky wave.",
+            steps:[
+                "Make a fist with your hand.",
+                "Extend your pinky finger straight up.",
+                "Keep all other fingers and the thumb curled in."
+            ],
+            tip:"Just your pinky, standing tall. Everything else is tucked away."
+        },
+        'J': {
+            type:'mot',
+            intro:"This is a <strong>motion letter</strong>! Start with a pinky sign (like 'I'), then draw a 'J' shape in the air.",
+            steps:[
+                "Extend your pinky finger (same as the letter I).",
+                "Starting from the top, trace a 'J' curve in the air — <em>move your pinky down, then curl it upward and to the left</em>.",
+                "The motion should be smooth and looping, like writing the letter J."
+            ],
+            tip:"The app watches for this J-curve motion automatically — just perform the letter naturally and hold still at the end."
+        },
+        'K': {
+            type:'let',
+            intro:"Extend your <strong>index and middle fingers in a V</strong>, with your thumb touching between them.",
+            steps:[
+                "Extend your index finger straight up and middle finger angled slightly forward.",
+                "Place your thumb between the index and middle fingers, touching the side of the middle finger.",
+                "Fold the ring and pinky fingers into the palm."
+            ],
+            tip:"Like a peace sign, but with the thumb pushed up between the two fingers."
+        },
+        'L': {
+            type:'let',
+            intro:"Make an <strong>L shape</strong> — index finger pointing up, thumb pointing to the side.",
+            steps:[
+                "Extend your index finger straight up.",
+                "Extend your thumb horizontally to the side.",
+                "Curl your middle, ring, and pinky fingers into the palm."
+            ],
+            tip:"The classic 'L for Loser' hand shape — but now you're using it to learn ASL!"
+        },
+        'M': {
+            type:'let',
+            intro:"Fold <strong>three fingers (index, middle, ring) over the thumb</strong>, which is tucked into the palm.",
+            steps:[
+                "Tuck your thumb loosely into your palm.",
+                "Fold your index, middle, and ring fingers down over the thumb.",
+                "Keep the pinky finger curled in similarly.",
+                "Hold the hand with knuckles forward."
+            ],
+            tip:"Visualize three 'humps' of the letter M — the three fingertips represent each hump."
+        },
+        'N': {
+            type:'let',
+            intro:"Similar to M, but only <strong>two fingers (index and middle)</strong> fold over the tucked thumb.",
+            steps:[
+                "Tuck your thumb loosely into your palm.",
+                "Fold your index and middle fingers down over the thumb.",
+                "Keep ring and pinky fingers curled into the palm (not over thumb)."
+            ],
+            tip:"Two humps for N, three for M — very similar signs, so pay attention to the finger count."
+        },
+        'O': {
+            type:'let',
+            intro:"Curve all fingers and thumb together to form a <strong>round O shape</strong>.",
+            steps:[
+                "Curve all four fingers downward and inward.",
+                "Bring your thumb up to meet the fingertips.",
+                "All fingers and thumb should touch (or nearly touch) forming a circle."
+            ],
+            tip:"The shape of your hand literally looks like the letter O when viewed from the side."
+        },
+        'P': {
+            type:'let',
+            intro:"Similar to K, but <strong>rotated downward</strong> — index and middle point down, thumb out.",
+            steps:[
+                "Start with a K handshape (index up, middle forward, thumb between them).",
+                "Rotate your wrist so the fingers point downward.",
+                "Your thumb should now point to the side, and the V of fingers faces down."
+            ],
+            tip:"Think of it as a K that's been tipped over to point at the ground."
+        },
+        'Q': {
+            type:'let',
+            intro:"Like G but <strong>rotated downward</strong> — index and thumb both point down.",
+            steps:[
+                "Start with a G handshape (index and thumb extended sideways).",
+                "Rotate your wrist so both the index finger and thumb point downward.",
+                "The other fingers remain curled in the palm."
+            ],
+            tip:"It's a G that's pointing toward the floor instead of sideways."
+        },
+        'R': {
+            type:'let',
+            intro:"<strong>Cross your index and middle fingers</strong> — like crossing your fingers for luck.",
+            steps:[
+                "Extend your index finger upward.",
+                "Cross your middle finger over the top of your index finger.",
+                "Fold the ring and pinky fingers down, and tuck the thumb."
+            ],
+            tip:"Literally the 'crossed fingers' gesture you make for good luck."
+        },
+        'S': {
+            type:'let',
+            intro:"Make a <strong>fist with the thumb across the front</strong> of your curled fingers.",
+            steps:[
+                "Curl all four fingers into a fist.",
+                "Place your thumb across the front of your fingers, over the middle knuckles.",
+                "The thumb rests horizontally across the outside of the fist."
+            ],
+            tip:"Very close to A, but the thumb wraps over the front of the fingers rather than resting at the side."
+        },
+        'T': {
+            type:'let',
+            intro:"Tuck your <strong>thumb between index and middle finger</strong>, making a compact fist-like shape.",
+            steps:[
+                "Make a fist.",
+                "Extend your thumb upward, then tuck it between your index and middle fingers.",
+                "The thumb tip should be visible between those two fingers."
+            ],
+            tip:"It looks like a compact fist with the thumb peeking through the middle."
+        },
+        'U': {
+            type:'let',
+            intro:"Extend <strong>index and middle fingers straight up together</strong> — the peace sign without spreading.",
+            steps:[
+                "Extend your index and middle fingers fully upward, pressing them together.",
+                "Fold the ring and pinky fingers down.",
+                "Tuck the thumb across the folded fingers."
+            ],
+            tip:"Like a peace sign but with the two fingers kept together rather than spread into a V."
+        },
+        'V': {
+            type:'let',
+            intro:"Spread your <strong>index and middle fingers into a V</strong> — the peace/victory sign!",
+            steps:[
+                "Extend your index and middle fingers fully, spread apart in a V shape.",
+                "Fold the ring and pinky fingers down.",
+                "Tuck the thumb across the folded fingers."
+            ],
+            tip:"The classic peace sign. You probably already know this one!"
+        },
+        'W': {
+            type:'let',
+            intro:"Extend <strong>three fingers (index, middle, ring) spread apart</strong> in a W shape.",
+            steps:[
+                "Extend your index, middle, and ring fingers fully, spreading them apart.",
+                "Fold your pinky finger down.",
+                "Tuck the thumb across the folded pinky."
+            ],
+            tip:"Three fingers fanned out wide. Think 'W for Wide' to remember the spread."
+        },
+        'X': {
+            type:'let',
+            intro:"Make a <strong>hook with your index finger</strong> — bent like a fishhook.",
+            steps:[
+                "Curl your index finger into a bent hook shape (not fully curled, just crooked at the joint).",
+                "Keep all other fingers curled into the palm.",
+                "Tuck the thumb across the fingers."
+            ],
+            tip:"Just a crooked, hooked index finger — like beckoning someone to come closer."
+        },
+        'Y': {
+            type:'let',
+            intro:"Extend your <strong>thumb and pinky</strong> outward — the 'hang loose' or shaka sign.",
+            steps:[
+                "Extend your thumb out to the side.",
+                "Extend your pinky finger up and slightly outward.",
+                "Curl your index, middle, and ring fingers into the palm."
+            ],
+            tip:"The surfer's 'hang loose' shaka sign — easy to remember!"
+        },
+        'Z': {
+            type:'mot',
+            intro:"This is a <strong>motion letter</strong>! Extend your index finger and draw a 'Z' shape in the air.",
+            steps:[
+                "Extend only your index finger (all others curled, like the number 1).",
+                "Draw a Z in the air: <em>move right, then diagonally down-left, then right again</em>.",
+                "The three strokes of the Z should be smooth and deliberate."
+            ],
+            tip:"Write the letter Z with your fingertip in the air. The app watches for this zigzag motion pattern."
+        },
+        '0': {
+            type:'num',
+            intro:"Touch all <strong>fingertips to the thumb tip</strong> to form a round O — like blowing a kiss.",
+            steps:[
+                "Bring all four fingertips together toward your thumb tip.",
+                "All five digits touch at their tips, forming a rounded bundle.",
+                "The shape looks like an O or a closed bud from the side."
+            ],
+            tip:"Similar to the letter O, but all fingertips touch the thumb tip more precisely. Think of pinching air."
+        },
+        '1': {
+            type:'num',
+            intro:"Point your <strong>index finger straight up</strong> — one finger, one number.",
+            steps:[
+                "Extend your index finger fully upward.",
+                "Curl all other fingers into the palm.",
+                "Tuck the thumb across the curled fingers."
+            ],
+            tip:"Simple and intuitive — just one finger pointing up to mean 'one'."
+        },
+        '2': {
+            type:'num',
+            intro:"Hold up <strong>two fingers in a V</strong> — like the number 2 or the peace sign.",
+            steps:[
+                "Extend your index and middle fingers upward, slightly spread.",
+                "Fold ring and pinky fingers down.",
+                "Tuck the thumb."
+            ],
+            tip:"Like the letter V or a peace sign. Two fingers = two."
+        },
+        '3': {
+            type:'num',
+            intro:"Extend <strong>thumb, index, and middle fingers</strong> — three fingers up.",
+            steps:[
+                "Extend your thumb out to the side.",
+                "Extend your index and middle fingers straight up.",
+                "Fold ring and pinky fingers into the palm."
+            ],
+            tip:"Think of it as the number 2 plus an added thumb making the spread look like a '3'."
+        },
+        '4': {
+            type:'num',
+            intro:"Extend <strong>four fingers (index through pinky)</strong> straight up, thumb folded in.",
+            steps:[
+                "Extend all four fingers (index, middle, ring, pinky) straight up together.",
+                "Fold your thumb across into the palm.",
+                "Hold palm forward."
+            ],
+            tip:"Four fingers up, thumb hidden — clean and simple."
+        },
+        '5': {
+            type:'num',
+            intro:"Spread <strong>all five fingers wide open</strong> — an open hand.",
+            steps:[
+                "Open your hand fully.",
+                "Spread all five fingers as wide as they'll comfortably go.",
+                "Hold the open palm facing outward."
+            ],
+            tip:"The most natural hand position — just open your hand wide!"
+        },
+        '6': {
+            type:'num',
+            intro:"Touch your <strong>pinky to your thumb</strong> while keeping other fingers extended.",
+            steps:[
+                "Extend your index, middle, and ring fingers upward.",
+                "Touch the tip of your pinky to the tip of your thumb.",
+                "Keep the three extended fingers straight and spread slightly."
+            ],
+            tip:"Think of it as a modified 'W' but with thumb and pinky connected below."
+        },
+        '7': {
+            type:'num',
+            intro:"Touch your <strong>ring finger to your thumb</strong> while keeping others extended.",
+            steps:[
+                "Extend your index, middle, and pinky fingers upward.",
+                "Touch the tip of your ring finger to the tip of your thumb.",
+                "Keep the three other fingers comfortably extended."
+            ],
+            tip:"Similar to 6 but move one finger inward — the ring finger connects to the thumb now."
+        },
+        '8': {
+            type:'num',
+            intro:"Touch your <strong>middle finger to your thumb</strong> while keeping others extended.",
+            steps:[
+                "Extend your index, ring, and pinky fingers upward.",
+                "Bring your middle finger down to touch the tip of your thumb.",
+                "Keep the three remaining fingers extended and relaxed."
+            ],
+            tip:"Working down from the outside in — pinky for 6, ring for 7, middle for 8."
+        },
+        '9': {
+            type:'num',
+            intro:"Touch your <strong>index finger to your thumb</strong> while other fingers are extended — like the OK sign with extras.",
+            steps:[
+                "Touch the tip of your index finger to the tip of your thumb, making a circle.",
+                "Extend your middle, ring, and pinky fingers upward.",
+                "Hold the shape comfortably upright."
+            ],
+            tip:"Very close to the letter F — the difference is subtle; practice both to distinguish them."
+        }
+    };
+
+    function openDexter(letter) {
+        var data = DEXTER_DATA[letter];
+        if (!data) return;
+
+        var t = data.type; // 'let', 'mot', 'num'
+        var badge = document.getElementById('dexterBadge');
+        badge.textContent = letter;
+        badge.className = 'dexter-sign-badge ' + t;
+
+        var doneBtn = document.getElementById('dexterDoneBtn');
+        doneBtn.className = 'dexter-done-btn ' + t;
+
+        var stepClass = t === 'mot' ? 'mot' : (t === 'num' ? 'num' : '');
+        var bubbleClass = 'dexter-bubble' + (t === 'mot' ? ' mot-bubble' : (t === 'num' ? ' num-bubble' : ''));
+
+        var typeLabel = t === 'mot'
+            ? '<span style="color:var(--accent3);font-size:10px;font-family:\'DM Mono\',monospace;display:block;margin-bottom:6px;">★ MOTION LETTER — requires hand movement</span>'
+            : (t === 'num'
+                ? '<span style="color:var(--accent4);font-size:10px;font-family:\'DM Mono\',monospace;display:block;margin-bottom:6px;">◆ NUMBER SIGN — switch to numbers mode</span>'
+                : '');
+
+        var stepsHTML = data.steps.map(function(s, i) {
+            return '<div class="dexter-step"><div class="step-num ' + stepClass + '">' + (i+1) + '</div><div class="step-text">' + s + '</div></div>';
+        }).join('');
+
+        var tipHTML = data.tip
+            ? '<div class="dexter-tip">' + data.tip + '</div>'
+            : '';
+
+        document.getElementById('dexterBody').innerHTML =
+            '<div class="' + bubbleClass + '">' +
+            typeLabel +
+            '<p>' + data.intro + '</p>' +
+            '</div>' +
+            '<div class="dexter-steps">' + stepsHTML + '</div>' +
+            tipHTML;
+
+        document.getElementById('dexterBackdrop').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeDexter() {
+        document.getElementById('dexterBackdrop').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    function closeDexterIfBackdrop(e) {
+        if (e.target === document.getElementById('dexterBackdrop')) closeDexter();
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeDexter();
+    });
+
     /* ─── LANDMARK SMOOTHER (EMA) ─── */
     var smoothedDraw = null, smoothedClass = null;
     var ALPHA_DRAW = 0.25, ALPHA_CLASS = 0.55;
@@ -267,18 +900,13 @@
 
     /* ══════════════════════════════════════════════════════════════════
        PURE KNN CLASSIFIER
-       All classification is driven entirely by your training data.
-       No hard-coded finger rules — just cosine similarity to samples.
     ══════════════════════════════════════════════════════════════════ */
-    var allSamples = [];    /* [{label, flat: Float32Array}] */
-    var sampleCounts = {};  /* label → count, for the UI */
+    var allSamples = [];
+    var sampleCounts = {};
 
     var LETTER_LABELS = ['A','B','C','D','E','F','G','H','I','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y'];
     var NUMBER_LABELS = ['0','1','2','3','4','5','6','7','8','9'];
-    /* J and Z are handled by motion detection */
 
-    /* Normalise landmarks relative to wrist/palm, then L2-normalise to a unit vector.
-       This makes the descriptor invariant to hand size and position. */
     function flattenNormLM(lm) {
         var n = normLM(lm);
         var v = [];
@@ -287,57 +915,32 @@
         return v.map(function(x) { return x/mag; });
     }
 
-    /* K-Nearest-Neighbours with cosine similarity.
-       Returns {label, confidence, top[], noData} */
     function classifyKNN(lm, mode) {
         var candidateLabels = (mode === 'numbers') ? NUMBER_LABELS : LETTER_LABELS;
-
-        var candidates = allSamples.filter(function(s) {
-            return candidateLabels.indexOf(s.label) >= 0;
-        });
-
-        if (candidates.length === 0) {
-            return {label: null, confidence: 0, top: [], noData: true};
-        }
-
+        var candidates = allSamples.filter(function(s) { return candidateLabels.indexOf(s.label) >= 0; });
+        if (candidates.length === 0) return {label: null, confidence: 0, top: [], noData: true};
         var incoming = flattenNormLM(lm);
         var K = Math.min(7, candidates.length);
-
-        /* Cosine similarity = dot product of two unit vectors */
         var scored = candidates.map(function(s) {
             var dot = 0;
             for (var i = 0; i < incoming.length; i++) dot += incoming[i] * s.flat[i];
             return {label: s.label, sim: dot};
         });
         scored.sort(function(a, b) { return b.sim - a.sim; });
-
         var topK = scored.slice(0, K);
-        var bestSim = Math.max(0, topK[0].sim);  /* similarity of nearest neighbour */
-
-        /* Vote counting among K nearest */
+        var bestSim = Math.max(0, topK[0].sim);
         var votes = {};
         topK.forEach(function(s) { votes[s.label] = (votes[s.label]||0) + 1; });
-
-        var sortedVotes = Object.keys(votes).map(function(l) {
-            return {l: l, v: votes[l]};
-        }).sort(function(a, b) { return b.v - a.v; });
-
+        var sortedVotes = Object.keys(votes).map(function(l) { return {l: l, v: votes[l]}; }).sort(function(a, b) { return b.v - a.v; });
         var winner = sortedVotes[0].l;
         var voteFrac = sortedVotes[0].v / K;
-
-        /* Confidence blends vote majority and best-match cosine similarity */
         var confidence = Math.min(1, voteFrac * 0.6 + bestSim * 0.4);
-
-        var top = sortedVotes.map(function(item) {
-            return {l: item.l, s: item.v, p: Math.round(item.v / K * 100)};
-        });
-
+        var top = sortedVotes.map(function(item) { return {l: item.l, s: item.v, p: Math.round(item.v / K * 100)}; });
         return {label: winner, confidence: confidence, top: top.slice(0, 5), noData: false};
     }
 
     /* ══════════════════════════════════════════════════════════════════
        J & Z MOTION DETECTION
-       (these two letters are defined by movement, not static pose)
     ══════════════════════════════════════════════════════════════════ */
     var TRAIL_LEN=30, idxTrail=[], pkTrail=[], motCD=0;
 
@@ -354,7 +957,6 @@
         return d;
     }
 
-    /* Helper: is pinky extended, others curled? (for J) */
     function normLMExt(lm, tip, pip, mcp, thr) {
         if(thr===undefined)thr=0.35;
         var n=normLM(lm);
@@ -413,16 +1015,13 @@
 
     /* ══════════════════════════════════════════════════════════════════
        INDEXEDDB — training data
-       Shared with viewer.html (same DB name + store).
     ══════════════════════════════════════════════════════════════════ */
     var DB=null, DB_NAME='asl_training', DB_VER=1, STORE='samples';
     var lastClassLM=null;
 
     function openDB(cb) {
         var req=indexedDB.open(DB_NAME,DB_VER);
-        req.onupgradeneeded=function(e){
-            e.target.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});
-        };
+        req.onupgradeneeded=function(e){ e.target.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true}); };
         req.onsuccess=function(e){DB=e.target.result;cb&&cb();};
         req.onerror=function(){console.warn('IndexedDB unavailable');};
     }
@@ -439,7 +1038,6 @@
         tx.objectStore(STORE).add(record).onsuccess=function(){cb&&cb();};
     }
 
-    /* Load all samples from DB, pre-compute flattened vectors for fast KNN */
     function reloadSamples() {
         dbGetAll(function(rows) {
             sampleCounts = {};
@@ -447,16 +1045,13 @@
             rows.forEach(function(r) {
                 if(!r.landmarks||r.landmarks.length<21)return;
                 sampleCounts[r.label] = (sampleCounts[r.label]||0) + 1;
-                try {
-                    allSamples.push({label: r.label, flat: flattenNormLM(r.landmarks)});
-                } catch(e){}
+                try { allSamples.push({label: r.label, flat: flattenNormLM(r.landmarks)}); } catch(e){}
             });
             renderTrainCounts();
             updateNodataBanner();
         });
     }
 
-    /* Keep old name working (called from HTML button) */
     function reloadUserBoosts() { reloadSamples(); }
 
     function updateNodataBanner() {
@@ -471,7 +1066,6 @@
         var lbl=document.getElementById('trainLabel').value;
         if(!lbl){showTrainStatus('Pick a label first','var(--accent2)');return;}
         if(!lastClassLM){showTrainStatus('No hand in frame','var(--accent2)');return;}
-        /* Save landmarks as [{x,y,z}] objects — consistent with viewer.html */
         var record={label:lbl,landmarks:lastClassLM,ts:Date.now()};
         dbAdd(record,function(){
             showTrainStatus('Saved sample for '+lbl+' ✓','var(--accent)');
@@ -489,8 +1083,7 @@
     function renderTrainCounts() {
         var el=document.getElementById('trainCounts');
         if(!el)return;
-        var labels=['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-            '0','1','2','3','4','5','6','7','8','9'];
+        var labels=['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','0','1','2','3','4','5','6','7','8','9'];
         el.innerHTML=labels.map(function(l){
             var n=sampleCounts[l]||0;
             return '<span class="tc'+(n>0?' has':'')+'" title="'+n+' samples">'+l+(n?':'+n:'')+'</span>';
@@ -550,6 +1143,39 @@
         if(txt)navigator.clipboard.writeText(txt).catch(function(){});
     }
 
+    var _speaking = false;
+    function speakSentence() {
+        var txt = sentence.map(function(i){return i.ch;}).join('').trim().toLowerCase();
+        if (!txt) return;
+        var btn = document.getElementById('speakBtn');
+        var icon = document.getElementById('speakIcon');
+
+        // If already speaking, stop it
+        if (_speaking) {
+            window.speechSynthesis.cancel();
+            _speaking = false;
+            btn.classList.remove('speaking');
+            icon.textContent = '🔊';
+            return;
+        }
+
+        var utt = new SpeechSynthesisUtterance(txt);
+        utt.rate = 0.95;
+        utt.pitch = 1;
+        utt.onstart = function() {
+            _speaking = true;
+            btn.classList.add('speaking');
+            icon.textContent = '⏹';
+        };
+        utt.onend = utt.onerror = function() {
+            _speaking = false;
+            btn.classList.remove('speaking');
+            icon.textContent = '🔊';
+        };
+        window.speechSynthesis.cancel(); // clear queue first
+        window.speechSynthesis.speak(utt);
+    }
+
     function addChip(ch, type) {
         var row=document.getElementById('historyRow'),chip=document.createElement('span');
         chip.className='chip'+(type==='mot'?' mot':(type==='num'?' num':(type==='space'?' space':'')));
@@ -568,9 +1194,6 @@
         var el=document.getElementById('statusMsg');el.textContent=msg;el.className=active?'active':'';
     }
 
-    /* ── Auto-import training_data.json on first load ──────────────────
-       Fetches ./training_data.json from the same folder.
-       Merges by timestamp so reopening never creates duplicates.     */
     function mergeAndReload(incoming) {
         dbGetAll(function(existing) {
             var existingTs = new Set(existing.map(function(r) { return r.ts; }));
@@ -582,9 +1205,7 @@
             function next() {
                 if (i < fresh.length) {
                     var r = Object.assign({}, fresh[i++]); delete r.id; st.add(r).onsuccess = next;
-                } else {
-                    reloadSamples();
-                }
+                } else { reloadSamples(); }
             }
             next();
         });
@@ -609,7 +1230,7 @@
         updateNodataBanner();
     }
 
-    /* Build reference grid */
+    /* Build reference grid — with click-to-open-Dexter */
     (function(){
         var items=[
             {l:'A'},{l:'B'},{l:'C'},{l:'D'},{l:'E'},{l:'F'},
@@ -626,7 +1247,11 @@
             var c=document.createElement('div');
             c.className='ref-cell'+(it.mot?' mot-cell':'')+(it.num?' num-cell':'');
             c.id='gc-'+it.l;
-            c.innerHTML='<div class="ref-letter">'+it.l+'</div><div class="ref-desc">'+(it.mot?'★ motion':(it.num?'◆ number':'static'))+'</div>';
+            c.title='Click to see how to sign "'+it.l+'"';
+            c.innerHTML='<div class="ref-letter">'+it.l+'</div>'
+                +'<div class="ref-desc">'+(it.mot?'★ motion':(it.num?'◆ number':'static'))+'</div>'
+                +'<div class="ref-hint">tap for help</div>';
+            c.addEventListener('click', function() { openDexter(it.l); });
             g.appendChild(c);
         });
     })();
@@ -641,7 +1266,6 @@
     ══════════════════════════════════════════════════════════════════ */
     var CONN=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
     var TIPS=[4,8,12,16,20];
-
     var stream=null, animF=null, handsModel=null;
     var vid=null, ov=null, octx=null, tc=null, tctx=null, scrTrail=[];
 
@@ -649,7 +1273,6 @@
         vid=document.getElementById('video');
         ov=document.getElementById('overlay'); octx=ov.getContext('2d');
         tc=document.getElementById('trailCanvas'); tctx=tc.getContext('2d');
-
         setStatus('Requesting camera…');
         try {
             stream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480}});
@@ -660,18 +1283,14 @@
             document.getElementById('startBtn').style.display='none';
             document.getElementById('stopBtn').style.display='';
             document.getElementById('modeBtn').style.display='';
-
             setStatus('Loading MediaPipe hands model…');
             document.getElementById('modelBadge').textContent='⟳ loading model…';
             document.getElementById('modelBadge').className='badge badge-loading';
-
             handsModel=new Hands({locateFile:function(f){return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/'+f;}});
             handsModel.setOptions({maxNumHands:1,modelComplexity:1,minDetectionConfidence:0.72,minTrackingConfidence:0.62});
             handsModel.onResults(onResults);
             await handsModel.initialize();
-
             initSmoothers();
-
             var sampleCount=allSamples.length;
             document.getElementById('modelBadge').textContent='✓ ready · '+sampleCount+' samples';
             document.getElementById('modelBadge').className='badge badge-ready';
@@ -705,9 +1324,7 @@
 
     async function loop() {
         if(!stream)return;
-        if(vid&&vid.readyState>=2){
-            try{ await handsModel.send({image:vid}); } catch(e){}
-        }
+        if(vid&&vid.readyState>=2){ try{ await handsModel.send({image:vid}); } catch(e){} }
         if(stream) animF=requestAnimationFrame(loop);
     }
 
@@ -716,11 +1333,9 @@
         ov.height=tc.height=vid.videoHeight;
         octx.clearRect(0,0,ov.width,ov.height);
         if(motCD>0)motCD--;
-
         var det=results.multiHandLandmarks?results.multiHandLandmarks.length:0;
         document.getElementById('handCount').textContent=det;
         var mb=document.getElementById('motBadge');
-
         if(!det){
             document.getElementById('detectLetter').textContent='—';
             document.getElementById('detectLabel').textContent='no hand in frame';
@@ -736,15 +1351,11 @@
             document.getElementById('debugInfo').textContent='';
             return;
         }
-
         var rawLM=results.multiHandLandmarks[0];
         var smoothed=smoothLandmarks(rawLM);
         var drawLM=smoothed.draw;
         var classLM=smoothed.classify;
-
         lastClassLM=classLM;
-
-        /* Draw skeleton */
         var W=ov.width, H=ov.height;
         CONN.forEach(function(p){
             octx.beginPath();
@@ -759,8 +1370,6 @@
             octx.strokeStyle=tip?'rgba(220,140,0,.8)':'rgba(124,255,212,.5)';
             octx.lineWidth=1.5;octx.stroke();
         });
-
-        /* Trail */
         scrTrail.push({x:drawLM[8].x*W,y:drawLM[8].y*H});
         if(scrTrail.length>TRAIL_LEN)scrTrail.shift();
         tctx.clearRect(0,0,tc.width,tc.height);
@@ -769,10 +1378,7 @@
             tctx.strokeStyle='rgba(255,209,102,'+(a*.7)+')';tctx.lineWidth=a*2.5+.5;
             tctx.beginPath();tctx.moveTo(scrTrail[i-1].x,scrTrail[i-1].y);tctx.lineTo(scrTrail[i].x,scrTrail[i].y);tctx.stroke();
         }
-
-        /* Motion detection */
         pushTrail(classLM);
-
         if(curMode==='letters'){
             var isJ=detectJ(classLM), isZ=detectZ(classLM);
             if(isJ||isZ){
@@ -786,12 +1392,9 @@
             }
         }
         mb.style.display='none';
-
-        /* KNN classification — purely from your training data */
         var isN=(curMode==='numbers');
         var res=classifyKNN(classLM, curMode);
         var dl=document.getElementById('detectLetter');
-
         if(res.noData){
             dl.textContent='?';dl.className='detect-letter nodata';
             document.getElementById('detectLabel').textContent='train first → open Training Data';
@@ -802,18 +1405,15 @@
             highlightRef(null);updateHold(null,false,false);
             return;
         }
-
         var pct=Math.round(res.confidence*100);
         dl.textContent=res.label||'?';dl.className='detect-letter'+(isN?' num':'');
         document.getElementById('detectLabel').textContent=res.label?(isN?'Number: '+res.label:'ASL: "'+res.label+'"'):'uncertain';
         document.getElementById('confFill').style.width=pct+'%';document.getElementById('confFill').className='conf-fill'+(isN?' num':'');
         document.getElementById('confPct').textContent=pct+'%';document.getElementById('currentSign').textContent=res.label||'—';
-
         document.getElementById('topScores').innerHTML=res.top.map(function(sc,i){
-            return '<span class="sc'+(i===0?(isN?' best-num':' best'):'')+'">'+ sc.l+': '+sc.s+'nn ('+sc.p+'%)</span>';
+            return '<span class="sc'+(i===0?(isN?' best-num':' best'):'')+'">'+sc.l+': '+sc.s+'nn ('+sc.p+'%)</span>';
         }).join('');
         document.getElementById('debugInfo').textContent='KNN · mode: '+curMode+' · total samples: '+allSamples.length+' · for mode: '+allSamples.filter(function(s){return(isN?NUMBER_LABELS:LETTER_LABELS).indexOf(s.label)>=0;}).length;
-
         highlightRef(res.label);
         updateHold(res.confidence>0.40?res.label:null, false, isN);
     }
