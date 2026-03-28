@@ -80,7 +80,7 @@
 
         .sentence-display{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--text);min-height:60px;line-height:1.4;word-break:break-word;letter-spacing:.05em;cursor:text;}
         .sentence-display .s-char{display:inline;position:relative;}
-        .sentence-display .at-cursor::after{content:'';display:inline-block;width:2px;height:.9em;background:var(--accent);vertical-align:text-bottom;margin-left:0px;animation:blink 1s step-end infinite;}
+        .sentence-display .at-cursor::before{content:'';display:inline-block;width:2px;height:.9em;background:var(--accent);vertical-align:text-bottom;margin-right:0px;animation:blink 1s step-end infinite;}
         .sentence-display.end-cursor::after{content:'';display:inline-block;width:2px;height:.9em;background:var(--accent);vertical-align:text-bottom;margin-left:1px;animation:blink 1s step-end infinite;}
         @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 
