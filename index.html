@@ -10,6 +10,7 @@
         :root {
             --bg:#050a12;--surface:#090f1a;--border:#0e2236;
             --accent:#00d4ff;--accent2:#ff6b6b;--accent3:#ffd166;--accent4:#3b82f6;
+            --accent5:#a78bfa;
             --text:#ddeeff;--muted:#3a6080;--card:#080e1c;
         }
         *{box-sizing:border-box;margin:0;padding:0;}
@@ -44,6 +45,7 @@
         .btn.danger{border-color:rgba(255,107,107,.4);color:var(--accent2);}
         .btn.danger:hover{background:rgba(255,107,107,.1);}
         .btn.mode-num{background:rgba(59,130,246,.15);border-color:var(--accent4);color:var(--accent4);}
+        .btn.mode-custom{background:rgba(167,139,250,.15);border-color:var(--accent5);color:var(--accent5);}
         #statusMsg{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin-left:4px;}
         #statusMsg.active{color:var(--accent);}
 
@@ -66,17 +68,20 @@
         .detect-letter{font-size:52px;font-weight:800;color:var(--accent);line-height:1;text-shadow:0 0 20px rgba(0,212,255,.5);}
         .detect-letter.mot{color:var(--accent3);}
         .detect-letter.num{color:var(--accent4);}
+        .detect-letter.custom{color:var(--accent5);font-size:28px;}
         .detect-letter.nodata{color:var(--muted);font-size:36px;}
         .detect-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px;}
         .confidence-bar{margin-top:6px;height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
         .conf-fill{height:100%;background:linear-gradient(90deg,#0090c0,#00d4ff);border-radius:2px;transition:width .15s;}
         .conf-fill.num{background:linear-gradient(90deg,#1a50c0,#3b82f6);}
+        .conf-fill.custom{background:linear-gradient(90deg,#6d28d9,#a78bfa);}
 
         .mot-badge{position:absolute;top:12px;right:14px;background:rgba(5,10,18,.88);border:1px solid rgba(255,209,102,.35);border-radius:8px;padding:6px 10px;backdrop-filter:blur(8px);font-family:'DM Mono',monospace;font-size:11px;color:var(--accent3);display:none;}
         .trail-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;transform:scaleX(-1);}
         .mode-pill{position:absolute;bottom:14px;left:14px;font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;border-radius:20px;backdrop-filter:blur(8px);}
         .mode-pill.let{background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.3);color:var(--accent);}
         .mode-pill.num{background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);color:var(--accent4);}
+        .mode-pill.custom{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);color:var(--accent5);}
 
         .hold-ring{position:absolute;bottom:14px;right:14px;width:56px;height:56px;}
         .hold-ring svg{transform:rotate(-90deg);}
@@ -116,13 +121,30 @@
         .train-panel.hidden{display:none;}
         .train-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:.5rem;}
         .train-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap;}
-        .train-select{font-family:'DM Mono',monospace;font-size:13px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 8px;cursor:pointer;}
+        .train-select{font-family:'DM Mono',monospace;font-size:13px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 8px;cursor:pointer;max-width:140px;}
         .train-save{background:rgba(0,212,255,.15);border:1px solid rgba(0,212,255,.4);color:var(--accent);font-family:'Syne',sans-serif;font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;cursor:pointer;transition:all .15s;}
         .train-save:hover{background:rgba(0,212,255,.3);}
         .train-counts{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
         .tc{padding:1px 5px;border-radius:3px;background:var(--surface);border:1px solid var(--border);font-size:10px;}
         .tc.has{border-color:rgba(0,212,255,.4);color:var(--accent);}
+        .tc.custom-tc{border-color:rgba(167,139,250,.3);}
+        .tc.custom-tc.has{border-color:rgba(167,139,250,.6);color:var(--accent5);}
         .train-status{font-family:'DM Mono',monospace;font-size:11px;min-height:16px;color:var(--accent);margin-top:4px;}
+
+        /* ── CUSTOM LABEL ADDER ── */
+        .custom-label-section{margin-top:.75rem;padding-top:.75rem;border-top:1px solid rgba(167,139,250,.15);}
+        .custom-label-title{font-family:'DM Mono',monospace;font-size:10px;color:var(--accent5);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:6px;}
+        .custom-label-title::before{content:'◈';font-size:11px;}
+        .custom-add-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+        .custom-input{font-family:'DM Mono',monospace;font-size:13px;background:var(--surface);border:1px solid rgba(167,139,250,.3);color:var(--text);border-radius:5px;padding:5px 9px;width:130px;outline:none;transition:border-color .15s;}
+        .custom-input:focus{border-color:rgba(167,139,250,.6);box-shadow:0 0 8px rgba(167,139,250,.1);}
+        .custom-add-btn{background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.4);color:var(--accent5);font-family:'Syne',sans-serif;font-size:12px;font-weight:600;padding:5px 12px;border-radius:6px;cursor:pointer;transition:all .15s;}
+        .custom-add-btn:hover{background:rgba(167,139,250,.3);}
+        .custom-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:.5rem;}
+        .custom-chip{display:inline-flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:11px;padding:3px 8px;border-radius:5px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.3);color:var(--accent5);}
+        .custom-chip-del{background:none;border:none;cursor:pointer;color:rgba(167,139,250,.5);font-size:13px;line-height:1;padding:0;transition:color .15s;}
+        .custom-chip-del:hover{color:var(--accent2);}
+        .custom-hint{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:.4rem;line-height:1.5;}
 
         .nodata-banner{background:rgba(255,107,107,.07);border:1px solid rgba(255,107,107,.2);border-radius:8px;padding:.6rem .9rem;font-family:'DM Mono',monospace;font-size:11px;color:var(--accent2);margin-bottom:.5rem;display:none;}
 
@@ -132,12 +154,15 @@
         .chip.space{background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.25);color:var(--accent);}
         .chip.mot  {background:rgba(255,209,102,.08);border-color:rgba(255,209,102,.25);color:var(--accent3);}
         .chip.num  {background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.25);color:var(--accent4);}
+        .chip.custom{background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.25);color:var(--accent5);}
 
         .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
         .stat-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:2px;}
         .stat-value{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;}
 
         .ref-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;}
+        .ref-section-label{grid-column:1/-1;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:2px;}
+        .ref-section-label:first-child{border-top:none;margin-top:0;padding-top:0;}
         .ref-cell{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 4px;text-align:center;transition:all .15s;cursor:pointer;position:relative;}
         .ref-cell:hover{background:rgba(0,212,255,.07);border-color:rgba(0,212,255,.3);transform:translateY(-1px);}
         .ref-cell.active{background:rgba(0,212,255,.12);border-color:var(--accent);box-shadow:0 0 8px rgba(0,212,255,.2);}
@@ -147,19 +172,25 @@
         .ref-cell.num-cell{border-color:rgba(59,130,246,.2);}
         .ref-cell.num-cell:hover{background:rgba(59,130,246,.07);border-color:rgba(59,130,246,.5);}
         .ref-cell.num-cell.active{background:rgba(59,130,246,.1);border-color:var(--accent4);}
+        .ref-cell.custom-cell{border-color:rgba(167,139,250,.2);}
+        .ref-cell.custom-cell:hover{background:rgba(167,139,250,.07);border-color:rgba(167,139,250,.5);}
+        .ref-cell.custom-cell.active{background:rgba(167,139,250,.1);border-color:var(--accent5);}
         .ref-letter{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
         .ref-cell.mot-cell .ref-letter{color:var(--accent3);}
         .ref-cell.num-cell .ref-letter{color:var(--accent4);}
+        .ref-cell.custom-cell .ref-letter{color:var(--accent5);font-size:11px;}
         .ref-desc{font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);margin-top:1px;line-height:1.3;}
         .ref-hint{font-family:'DM Mono',monospace;font-size:7px;color:rgba(0,212,255,.3);margin-top:2px;letter-spacing:.04em;}
         .ref-cell.mot-cell .ref-hint{color:rgba(255,209,102,.35);}
         .ref-cell.num-cell .ref-hint{color:rgba(59,130,246,.35);}
+        .ref-cell.custom-cell .ref-hint{color:rgba(167,139,250,.35);}
 
         .debug-panel{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);line-height:1.7;}
         .top-scores{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;}
         .sc{padding:2px 7px;border-radius:3px;background:var(--surface);border:1px solid var(--border);font-size:10px;}
         .sc.best{background:rgba(0,212,255,.12);border-color:var(--accent);color:var(--accent);}
         .sc.best-num{background:rgba(59,130,246,.12);border-color:var(--accent4);color:var(--accent4);}
+        .sc.best-custom{background:rgba(167,139,250,.12);border-color:var(--accent5);color:var(--accent5);}
 
         /* ═══════════════════════════════════════════
            DEXTER DIALOG
@@ -182,6 +213,7 @@
         .dexter-sign-badge.let{background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.3);color:var(--accent);}
         .dexter-sign-badge.mot{background:rgba(255,209,102,.08);border-color:rgba(255,209,102,.3);color:var(--accent3);}
         .dexter-sign-badge.num{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.3);color:var(--accent4);}
+        .dexter-sign-badge.custom{background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.3);color:var(--accent5);font-size:16px;}
         .dexter-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;}
         .dexter-close:hover{background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.4);color:var(--accent2);}
         .dexter-body{padding:20px;}
@@ -193,12 +225,14 @@
         .dexter-bubble strong{color:var(--accent);font-weight:500;}
         .dexter-bubble.mot-bubble strong{color:var(--accent3);}
         .dexter-bubble.num-bubble strong{color:var(--accent4);}
+        .dexter-bubble.custom-bubble strong{color:var(--accent5);}
         .dexter-steps{display:flex;flex-direction:column;gap:8px;}
         .dexter-step{display:flex;align-items:flex-start;gap:11px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:9px;padding:10px 13px;transition:background .15s;}
         .dexter-step:hover{background:rgba(0,212,255,.04);}
         .step-num{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);display:flex;align-items:center;justify-content:center;margin-top:1px;}
         .step-num.mot{background:rgba(255,209,102,.1);border-color:rgba(255,209,102,.3);color:var(--accent3);}
         .step-num.num{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.3);color:var(--accent4);}
+        .step-num.custom{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:var(--accent5);}
         .step-text{font-family:'DM Mono',monospace;font-size:11.5px;line-height:1.55;color:var(--text);}
         .step-text em{color:var(--muted);font-style:normal;}
         .dexter-tip{margin-top:14px;background:rgba(255,209,102,.05);border:1px solid rgba(255,209,102,.15);border-radius:8px;padding:9px 13px;font-family:'DM Mono',monospace;font-size:11px;color:var(--accent3);line-height:1.5;}
@@ -212,6 +246,8 @@
         .dexter-done-btn.mot:hover{background:#e8b84d;}
         .dexter-done-btn.num{background:var(--accent4);color:#fff;}
         .dexter-done-btn.num:hover{background:#2563eb;}
+        .dexter-done-btn.custom{background:var(--accent5);color:#fff;}
+        .dexter-done-btn.custom:hover{background:#8b5cf6;}
 
         /* ═══════════════════════════════════════════
            PASSWORD MODAL
@@ -280,7 +316,7 @@
             <div class="controls">
                 <button class="btn primary" id="startBtn" onclick="startCamera()">Start Camera</button>
                 <button class="btn danger"  id="stopBtn"  onclick="stopCamera()" style="display:none">Stop</button>
-                <button class="btn"         id="modeBtn"  onclick="toggleMode()" style="display:none">Mode: Letters</button>
+                <button class="btn"         id="modeBtn"  onclick="cycleMode()" style="display:none">Mode: Letters</button>
                 <span id="statusMsg">Camera off</span>
             </div>
 
@@ -374,6 +410,22 @@
                     </div>
                     <div class="train-status" id="trainStatus"></div>
                     <div class="train-counts" id="trainCounts"></div>
+
+                    <!-- ── CUSTOM LABELS ── -->
+                    <div class="custom-label-section">
+                        <div class="custom-label-title">Custom labels <span style="color:var(--muted);font-size:9px;margin-left:4px;">(session only)</span></div>
+                        <div class="custom-add-row">
+                            <input class="custom-input" id="customLabelInput" type="text" placeholder="e.g. HELLO or YES" maxlength="20"
+                                   onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomLabel();}" />
+                            <button class="custom-add-btn" onclick="addCustomLabel()">+ Add</button>
+                        </div>
+                        <div class="custom-chips" id="customChips"></div>
+                        <div class="custom-hint">
+                            Type a word or phrase, press Add. Then select it in the dropdown above to train samples.
+                            Custom labels won't be saved after closing the page.
+                        </div>
+                    </div>
+
                     <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
                         <a href="viewer.html" target="_blank" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent4);text-decoration:none;padding:3px 8px;border:1px solid rgba(59,130,246,.3);border-radius:4px;">Open viewer ↗</a>
                         <button class="btn" style="font-size:10px;padding:3px 10px;" onclick="reloadSamples()">Reload samples</button>
@@ -401,6 +453,7 @@
                     Reference
                     <span style="color:var(--accent3);font-size:9px;margin-left:4px;">★ motion</span>
                     <span style="color:var(--accent4);font-size:9px;margin-left:4px;">◆ number</span>
+                    <span style="color:var(--accent5);font-size:9px;margin-left:4px;">◈ custom</span>
                     <span style="color:var(--muted);font-size:9px;margin-left:4px;">· click for help</span>
                 </div>
                 <div class="ref-grid" id="refGrid"></div>
@@ -466,16 +519,88 @@
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script>
     /* ══════════════════════════════════════════════════════════════════
+       CUSTOM LABELS  (session-only — not persisted)
+    ══════════════════════════════════════════════════════════════════ */
+    var customLabels = []; // array of strings, e.g. ["HELLO", "YES"]
+
+    function addCustomLabel() {
+        var input = document.getElementById('customLabelInput');
+        var raw = input.value.trim().toUpperCase();
+        if (!raw) return;
+        // Disallow duplicates with built-ins or existing custom labels
+        var builtIn = LETTER_LABELS.concat(NUMBER_LABELS).concat(['J','Z']);
+        if (builtIn.indexOf(raw) >= 0) {
+            showTrainStatus('That label already exists as a built-in.', 'var(--accent2)');
+            input.value = '';
+            return;
+        }
+        if (customLabels.indexOf(raw) >= 0) {
+            showTrainStatus('"' + raw + '" already added.', 'var(--accent3)');
+            input.value = '';
+            return;
+        }
+        customLabels.push(raw);
+        input.value = '';
+        renderCustomChips();
+        addCustomToDropdown(raw);
+        rebuildRefGrid();
+        renderTrainCounts();
+        showTrainStatus('Added custom label "' + raw + '" ✓', 'var(--accent5)');
+    }
+
+    function removeCustomLabel(label) {
+        customLabels = customLabels.filter(function(l) { return l !== label; });
+        // Remove from dropdown
+        var sel = document.getElementById('trainLabel');
+        for (var i = sel.options.length - 1; i >= 0; i--) {
+            if (sel.options[i].value === label && sel.options[i].dataset.custom === '1') {
+                sel.remove(i);
+            }
+        }
+        // Remove samples for this label from in-memory array (they're in DB but won't be classified)
+        allSamples = allSamples.filter(function(s) { return s.label !== label; });
+        renderCustomChips();
+        rebuildRefGrid();
+        renderTrainCounts();
+    }
+
+    function addCustomToDropdown(label) {
+        var sel = document.getElementById('trainLabel');
+        // Check for existing separator
+        var hasSep = false;
+        for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === '__custom_sep__') { hasSep = true; break; }
+        }
+        if (!hasSep) {
+            var sep = document.createElement('option');
+            sep.value = '__custom_sep__'; sep.disabled = true;
+            sep.textContent = '── Custom ──';
+            sel.appendChild(sep);
+        }
+        var opt = document.createElement('option');
+        opt.value = label; opt.textContent = label;
+        opt.dataset.custom = '1';
+        sel.appendChild(opt);
+    }
+
+    function renderCustomChips() {
+        var container = document.getElementById('customChips');
+        container.innerHTML = customLabels.map(function(l) {
+            return '<span class="custom-chip">'
+                + l
+                + '<button class="custom-chip-del" onclick="removeCustomLabel(\'' + l.replace(/'/g, "\\'") + '\')" title="Remove">×</button>'
+                + '</span>';
+        }).join('');
+    }
+
+    /* ══════════════════════════════════════════════════════════════════
        HOLD DURATION — configurable via slider
     ══════════════════════════════════════════════════════════════════ */
     var HOLD_MS = 1200;
 
     function updateHoldDuration(ms) {
         HOLD_MS = parseInt(ms, 10);
-        var secs = (HOLD_MS / 1000).toFixed(1) + 's';
-        /* Reset any in-progress hold so the new duration takes effect immediately */
-        holdCand = null;
-        holdStart = null;
+        holdCand = null; holdStart = null;
         var arc = document.getElementById('holdArc');
         if (arc) { arc.style.strokeDashoffset = 113; }
         var lbl = document.getElementById('holdLabel');
@@ -485,9 +610,7 @@
     /* ══════════════════════════════════════════════════════════════════
        SPEECH-TO-TEXT (Web Speech API)
     ══════════════════════════════════════════════════════════════════ */
-    var _recognition = null;
-    var _micListening = false;
-    var _interimLen = 0;
+    var _recognition = null, _micListening = false, _interimLen = 0;
 
     function setMicStatus(msg, active) {
         var el = document.getElementById('micStatus');
@@ -500,88 +623,41 @@
         var btn = document.getElementById('micBtn');
         var icon = document.getElementById('micIcon');
         var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-        if (!SpeechRecognition) {
-            setMicStatus('⚠ Not supported in this browser', false);
-            return;
-        }
-
+        if (!SpeechRecognition) { setMicStatus('⚠ Not supported in this browser', false); return; }
         if (_micListening) {
             if (_recognition) { _recognition.stop(); _recognition = null; }
-            _micListening = false;
-            btn.classList.remove('listening');
-            icon.textContent = '🎤';
+            _micListening = false; btn.classList.remove('listening'); icon.textContent = '🎤';
             setMicStatus('Dictation stopped', false);
-            setTimeout(function() { setMicStatus(''); }, 2000);
-            return;
+            setTimeout(function() { setMicStatus(''); }, 2000); return;
         }
-
         _recognition = new SpeechRecognition();
-        _recognition.continuous = true;
-        _recognition.interimResults = true;
-        _recognition.lang = 'en-US';
+        _recognition.continuous = true; _recognition.interimResults = true; _recognition.lang = 'en-US';
         _interimLen = 0;
-
-        _recognition.onstart = function() {
-            _micListening = true;
-            btn.classList.add('listening');
-            icon.textContent = '⏹';
-            setMicStatus('Listening… speak now', true);
-        };
-
+        _recognition.onstart = function() { _micListening = true; btn.classList.add('listening'); icon.textContent = '⏹'; setMicStatus('Listening… speak now', true); };
         _recognition.onresult = function(event) {
-            var interim = '';
-            var finalText = '';
+            var interim = '', finalText = '';
             for (var i = event.resultIndex; i < event.results.length; i++) {
                 var t = event.results[i][0].transcript;
-                if (event.results[i].isFinal) { finalText += t; }
-                else { interim += t; }
+                if (event.results[i].isFinal) { finalText += t; } else { interim += t; }
             }
-
             if (finalText) {
-                // Remove interim placeholder characters
-                for (var r = 0; r < _interimLen; r++) {
-                    if (cursorPos > 0) { sentence.splice(cursorPos - 1, 1); cursorPos--; }
-                }
+                for (var r = 0; r < _interimLen; r++) { if (cursorPos > 0) { sentence.splice(cursorPos - 1, 1); cursorPos--; } }
                 _interimLen = 0;
-                // Insert final text
-                finalText.split('').forEach(function(ch) {
-                    sentence.splice(cursorPos, 0, {ch: ch, type: 'let'});
-                    cursorPos++;
-                });
+                finalText.split('').forEach(function(ch) { sentence.splice(cursorPos, 0, {ch: ch, type: 'let'}); cursorPos++; });
                 renderSentence();
             } else if (interim) {
-                // Replace previous interim
-                for (var r = 0; r < _interimLen; r++) {
-                    if (cursorPos > 0) { sentence.splice(cursorPos - 1, 1); cursorPos--; }
-                }
-                interim.split('').forEach(function(ch) {
-                    sentence.splice(cursorPos, 0, {ch: ch, type: 'let'});
-                    cursorPos++;
-                });
-                _interimLen = interim.length;
-                renderSentence();
+                for (var r = 0; r < _interimLen; r++) { if (cursorPos > 0) { sentence.splice(cursorPos - 1, 1); cursorPos--; } }
+                interim.split('').forEach(function(ch) { sentence.splice(cursorPos, 0, {ch: ch, type: 'let'}); cursorPos++; });
+                _interimLen = interim.length; renderSentence();
             }
         };
-
         _recognition.onerror = function(event) {
             if (event.error === 'no-speech') return;
-            setMicStatus('⚠ ' + event.error, false);
-            _micListening = false;
-            btn.classList.remove('listening');
-            icon.textContent = '🎤';
-            _recognition = null;
+            setMicStatus('⚠ ' + event.error, false); _micListening = false;
+            btn.classList.remove('listening'); icon.textContent = '🎤'; _recognition = null;
         };
-
-        _recognition.onend = function() {
-            // Auto-restart if still supposed to be listening (browser cuts off after silence)
-            if (_micListening && _recognition) {
-                try { _recognition.start(); } catch(e) {}
-            }
-        };
-
-        try { _recognition.start(); }
-        catch(e) { setMicStatus('⚠ Could not start microphone', false); }
+        _recognition.onend = function() { if (_micListening && _recognition) { try { _recognition.start(); } catch(e) {} } };
+        try { _recognition.start(); } catch(e) { setMicStatus('⚠ Could not start microphone', false); }
     }
 
     /* ══════════════════════════════════════════════════════════════════
@@ -628,26 +704,42 @@
 
     function openDexter(letter) {
         var data = DEXTER_DATA[letter];
-        if (!data) return;
-        var t = data.type;
+        var isCustom = customLabels.indexOf(letter) >= 0;
+        var t, intro, steps, tip;
+        if (isCustom) {
+            t = 'custom';
+            intro = 'This is a <strong>custom label</strong> you defined for <strong>"' + letter + '"</strong>. Train it by signing your chosen gesture and saving samples in Training Data.';
+            steps = [
+                'Open Training Data and select "' + letter + '" from the dropdown.',
+                'Hold your chosen gesture in front of the camera.',
+                'Click "Save sample" multiple times from slightly different angles.',
+                'Switch to Custom mode and test your gesture.'
+            ];
+            tip = 'The more samples you add (10-20+), the more reliably the KNN classifier will recognise it.';
+        } else {
+            if (!data) return;
+            t = data.type; intro = data.intro; steps = data.steps; tip = data.tip;
+        }
         var badge = document.getElementById('dexterBadge');
-        badge.textContent = letter;
+        badge.textContent = letter.length > 4 ? letter.slice(0, 4) + '…' : letter;
         badge.className = 'dexter-sign-badge ' + t;
         var doneBtn = document.getElementById('dexterDoneBtn');
         doneBtn.className = 'dexter-done-btn ' + t;
-        var stepClass = t === 'mot' ? 'mot' : (t === 'num' ? 'num' : '');
-        var bubbleClass = 'dexter-bubble' + (t === 'mot' ? ' mot-bubble' : (t === 'num' ? ' num-bubble' : ''));
+        var stepClass = t === 'mot' ? 'mot' : (t === 'num' ? 'num' : (t === 'custom' ? 'custom' : ''));
+        var bubbleClass = 'dexter-bubble' + (t === 'mot' ? ' mot-bubble' : (t === 'num' ? ' num-bubble' : (t === 'custom' ? ' custom-bubble' : '')));
         var typeLabel = t === 'mot'
             ? '<span style="color:var(--accent3);font-size:10px;font-family:\'DM Mono\',monospace;display:block;margin-bottom:6px;">★ MOTION LETTER — requires hand movement</span>'
             : (t === 'num'
                 ? '<span style="color:var(--accent4);font-size:10px;font-family:\'DM Mono\',monospace;display:block;margin-bottom:6px;">◆ NUMBER SIGN — switch to numbers mode</span>'
-                : '');
-        var stepsHTML = data.steps.map(function(s, i) {
+                : (t === 'custom'
+                    ? '<span style="color:var(--accent5);font-size:10px;font-family:\'DM Mono\',monospace;display:block;margin-bottom:6px;">◈ CUSTOM LABEL — session only</span>'
+                    : ''));
+        var stepsHTML = steps.map(function(s, i) {
             return '<div class="dexter-step"><div class="step-num ' + stepClass + '">' + (i+1) + '</div><div class="step-text">' + s + '</div></div>';
         }).join('');
-        var tipHTML = data.tip ? '<div class="dexter-tip">' + data.tip + '</div>' : '';
+        var tipHTML = tip ? '<div class="dexter-tip">' + tip + '</div>' : '';
         document.getElementById('dexterBody').innerHTML =
-            '<div class="' + bubbleClass + '">' + typeLabel + '<p>' + data.intro + '</p></div>' +
+            '<div class="' + bubbleClass + '">' + typeLabel + '<p>' + intro + '</p></div>' +
             '<div class="dexter-steps">' + stepsHTML + '</div>' + tipHTML;
         document.getElementById('dexterBackdrop').classList.add('open');
         document.body.style.overflow = 'hidden';
@@ -673,25 +765,22 @@
     });
 
     /* ── TRAINING PANEL PASSWORD ── */
-    var TRAIN_PASSWORD = 'dexterity'; // ← change this to your own password
+    var TRAIN_PASSWORD = 'dexterity';
     var _trainUnlocked = false;
 
     function toggleTrainPanel() {
         var p = document.getElementById('trainPanel');
-        // Always allow closing without a password
         if (!p.classList.contains('hidden')) {
             p.classList.add('hidden');
             p.previousElementSibling.querySelector('button').textContent = 'Show ▾';
             return;
         }
-        // Already unlocked this session — open directly
         if (_trainUnlocked) {
             p.classList.remove('hidden');
             p.previousElementSibling.querySelector('button').textContent = 'Hide ▴';
             renderTrainCounts();
             return;
         }
-        // Need password
         openPwModal();
     }
 
@@ -699,8 +788,7 @@
         var modal = document.getElementById('pwBackdrop');
         var input = document.getElementById('pwInput');
         document.getElementById('pwError').textContent = '';
-        input.value = '';
-        input.type = 'password';
+        input.value = ''; input.type = 'password';
         document.getElementById('pwToggle').textContent = '👁';
         modal.classList.add('open');
         document.body.style.overflow = 'hidden';
@@ -716,8 +804,7 @@
         var val = document.getElementById('pwInput').value;
         var err = document.getElementById('pwError');
         if (val === TRAIN_PASSWORD) {
-            _trainUnlocked = true;
-            closePwModal();
+            _trainUnlocked = true; closePwModal();
             var p = document.getElementById('trainPanel');
             p.classList.remove('hidden');
             p.previousElementSibling.querySelector('button').textContent = 'Hide ▴';
@@ -725,8 +812,7 @@
         } else {
             err.textContent = '✖ incorrect password';
             var input = document.getElementById('pwInput');
-            input.value = '';
-            input.focus();
+            input.value = ''; input.focus();
         }
     }
 
@@ -778,7 +864,14 @@
     }
 
     function classifyKNN(lm, mode) {
-        var candidateLabels = (mode === 'numbers') ? NUMBER_LABELS : LETTER_LABELS;
+        var candidateLabels;
+        if (mode === 'numbers') {
+            candidateLabels = NUMBER_LABELS;
+        } else if (mode === 'custom') {
+            candidateLabels = customLabels.slice();
+        } else {
+            candidateLabels = LETTER_LABELS;
+        }
         var candidates = allSamples.filter(function(s) { return candidateLabels.indexOf(s.label) >= 0; });
         if (candidates.length === 0) return {label: null, confidence: 0, top: [], noData: true};
         var incoming = flattenNormLM(lm);
@@ -851,11 +944,11 @@
     }
 
     /* ══════════════════════════════════════════════════════════════════
-       HOLD LOGIC  (uses HOLD_MS — now user-configurable)
+       HOLD LOGIC
     ══════════════════════════════════════════════════════════════════ */
     var holdCand=null, holdStart=null;
 
-    function updateHold(label, isMotion, isNum) {
+    function updateHold(label, isMotion, typeStr) {
         var arc=document.getElementById('holdArc'),lbl=document.getElementById('holdLabel'),C=113;
         if(isMotion){
             commitSign(label,'mot');motCD=25;idxTrail=[];pkTrail=[];
@@ -869,7 +962,7 @@
         var prog=Math.min((Date.now()-holdStart)/HOLD_MS,1);
         arc.style.strokeDashoffset=C*(1-prog);
         if(prog>=1){
-            commitSign(label,isNum?'num':'let');holdCand=null;holdStart=null;
+            commitSign(label, typeStr || 'let');holdCand=null;holdStart=null;
             arc.style.strokeDashoffset=C;lbl.innerHTML='✓';
             setTimeout(function(){lbl.innerHTML='hold<br>sign';},600);
         }
@@ -904,8 +997,11 @@
         dbGetAll(function(rows) {
             sampleCounts = {};
             allSamples = [];
+            var knownLabels = LETTER_LABELS.concat(NUMBER_LABELS).concat(['J','Z']).concat(customLabels);
             rows.forEach(function(r) {
                 if(!r.landmarks||r.landmarks.length<21)return;
+                // Only load samples whose labels are either built-in or currently active custom labels
+                if (knownLabels.indexOf(r.label) < 0) return;
                 sampleCounts[r.label] = (sampleCounts[r.label]||0) + 1;
                 try { allSamples.push({label: r.label, flat: flattenNormLM(r.landmarks)}); } catch(e){}
             });
@@ -914,19 +1010,20 @@
         });
     }
 
-    function reloadUserBoosts() { reloadSamples(); }
-
     function updateNodataBanner() {
         var banner=document.getElementById('nodataBanner');
         if(!banner)return;
-        var candidateLabels=(curMode==='numbers')?NUMBER_LABELS:LETTER_LABELS;
+        var candidateLabels;
+        if (curMode === 'numbers') candidateLabels = NUMBER_LABELS;
+        else if (curMode === 'custom') candidateLabels = customLabels.slice();
+        else candidateLabels = LETTER_LABELS;
         var has=allSamples.some(function(s){return candidateLabels.indexOf(s.label)>=0;});
-        banner.style.display=has?'none':'block';
+        banner.style.display = (candidateLabels.length === 0 || !has) ? 'block' : 'none';
     }
 
     function saveSample() {
         var lbl=document.getElementById('trainLabel').value;
-        if(!lbl){showTrainStatus('Pick a label first','var(--accent2)');return;}
+        if(!lbl || lbl === '__custom_sep__'){showTrainStatus('Pick a label first','var(--accent2)');return;}
         if(!lastClassLM){showTrainStatus('No hand in frame','var(--accent2)');return;}
         var record={label:lbl,landmarks:lastClassLM,ts:Date.now()};
         dbAdd(record,function(){
@@ -946,11 +1043,113 @@
         var el=document.getElementById('trainCounts');
         if(!el)return;
         var labels=['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','0','1','2','3','4','5','6','7','8','9'];
-        el.innerHTML=labels.map(function(l){
+        var html = labels.map(function(l){
             var n=sampleCounts[l]||0;
             return '<span class="tc'+(n>0?' has':'')+'" title="'+n+' samples">'+l+(n?':'+n:'')+'</span>';
         }).join('');
+        // Custom label counts
+        if (customLabels.length > 0) {
+            html += '<span class="tc" style="color:var(--accent5);border-color:rgba(167,139,250,.2);background:transparent;padding:1px 5px;margin-left:4px;">◈</span>';
+            html += customLabels.map(function(l) {
+                var n = sampleCounts[l] || 0;
+                return '<span class="tc custom-tc' + (n > 0 ? ' has' : '') + '" title="' + n + ' samples">' + l + (n ? ':' + n : '') + '</span>';
+            }).join('');
+        }
+        el.innerHTML = html;
     }
+
+    /* ══════════════════════════════════════════════════════════════════
+       MODE CYCLING: letters → numbers → custom (if any) → letters
+    ══════════════════════════════════════════════════════════════════ */
+    var curMode='letters';
+
+    function cycleMode() {
+        var modes = ['letters', 'numbers'];
+        if (customLabels.length > 0) modes.push('custom');
+        var idx = modes.indexOf(curMode);
+        curMode = modes[(idx + 1) % modes.length];
+
+        var btn=document.getElementById('modeBtn'),pill=document.getElementById('modePill');
+        if (curMode === 'numbers') {
+            btn.textContent='Mode: Numbers'; btn.className='btn mode-num';
+            pill.textContent='NUMBERS'; pill.className='mode-pill num';
+        } else if (curMode === 'custom') {
+            btn.textContent='Mode: Custom'; btn.className='btn mode-custom';
+            pill.textContent='CUSTOM'; pill.className='mode-pill custom';
+        } else {
+            btn.textContent='Mode: Letters'; btn.className='btn';
+            pill.textContent='LETTERS'; pill.className='mode-pill let';
+        }
+        holdCand=null;holdStart=null;
+        updateNodataBanner();
+    }
+
+    /* ══════════════════════════════════════════════════════════════════
+       REFERENCE GRID — rebuilt whenever custom labels change
+    ══════════════════════════════════════════════════════════════════ */
+    function rebuildRefGrid() {
+        var g = document.getElementById('refGrid');
+        g.innerHTML = '';
+
+        // Section: Letters
+        var letSep = document.createElement('div');
+        letSep.className = 'ref-section-label';
+        letSep.textContent = 'Letters';
+        g.appendChild(letSep);
+
+        var letterItems = [
+            {l:'A'},{l:'B'},{l:'C'},{l:'D'},{l:'E'},{l:'F'},
+            {l:'G'},{l:'H'},{l:'I'},{l:'J',mot:true},{l:'K'},{l:'L'},
+            {l:'M'},{l:'N'},{l:'O'},{l:'P'},{l:'Q'},{l:'R'},
+            {l:'S'},{l:'T'},{l:'U'},{l:'V'},{l:'W'},{l:'X'},
+            {l:'Y'},{l:'Z',mot:true}
+        ];
+        letterItems.forEach(function(it) { g.appendChild(makeRefCell(it)); });
+
+        // Section: Numbers
+        var numSep = document.createElement('div');
+        numSep.className = 'ref-section-label';
+        numSep.textContent = 'Numbers';
+        g.appendChild(numSep);
+
+        var numberItems = [
+            {l:'0',num:true},{l:'1',num:true},{l:'2',num:true},{l:'3',num:true},{l:'4',num:true},
+            {l:'5',num:true},{l:'6',num:true},{l:'7',num:true},{l:'8',num:true},{l:'9',num:true}
+        ];
+        numberItems.forEach(function(it) { g.appendChild(makeRefCell(it)); });
+
+        // Section: Custom (if any)
+        if (customLabels.length > 0) {
+            var custSep = document.createElement('div');
+            custSep.className = 'ref-section-label';
+            custSep.textContent = 'Custom';
+            g.appendChild(custSep);
+
+            customLabels.forEach(function(l) {
+                g.appendChild(makeRefCell({l: l, custom: true}));
+            });
+        }
+    }
+
+    function makeRefCell(it) {
+        var c = document.createElement('div');
+        c.className = 'ref-cell' + (it.mot ? ' mot-cell' : '') + (it.num ? ' num-cell' : '') + (it.custom ? ' custom-cell' : '');
+        c.id = 'gc-' + it.l;
+        c.title = 'Click to see how to sign "' + it.l + '"';
+        c.innerHTML = '<div class="ref-letter">' + it.l + '</div>'
+            + '<div class="ref-desc">' + (it.mot ? '★ motion' : (it.num ? '◆ number' : (it.custom ? '◈ custom' : 'static'))) + '</div>'
+            + '<div class="ref-hint">tap for help</div>';
+        c.addEventListener('click', function() { openDexter(it.l); });
+        return c;
+    }
+
+    function highlightRef(lbl) {
+        document.querySelectorAll('.ref-cell').forEach(function(c){c.classList.remove('active');});
+        if(lbl){var el=document.getElementById('gc-'+lbl);if(el)el.classList.add('active');}
+    }
+
+    // Initial build
+    rebuildRefGrid();
 
     /* ══════════════════════════════════════════════════════════════════
        CURSOR-AWARE SENTENCE BUILDER
@@ -1004,11 +1203,8 @@
         var btn = document.getElementById('speakBtn');
         var icon = document.getElementById('speakIcon');
         if (_speaking) {
-            window.speechSynthesis.cancel();
-            _speaking = false;
-            btn.classList.remove('speaking');
-            icon.textContent = '🔊';
-            return;
+            window.speechSynthesis.cancel(); _speaking = false;
+            btn.classList.remove('speaking'); icon.textContent = '🔊'; return;
         }
         var utt = new SpeechSynthesisUtterance(txt);
         utt.rate = 0.95; utt.pitch = 1;
@@ -1020,7 +1216,7 @@
 
     function addChip(ch, type) {
         var row=document.getElementById('historyRow'),chip=document.createElement('span');
-        chip.className='chip'+(type==='mot'?' mot':(type==='num'?' num':(type==='space'?' space':'')));
+        chip.className='chip'+(type==='mot'?' mot':(type==='num'?' num':(type==='space'?' space':(type==='custom'?' custom':''))));
         chip.textContent=ch;row.appendChild(chip);
         while(row.children.length>24)row.removeChild(row.firstChild);
     }
@@ -1061,47 +1257,6 @@
     }
 
     openDB(tryAutoImport);
-
-    var curMode='letters';
-    function toggleMode() {
-        curMode=curMode==='letters'?'numbers':'letters';
-        var btn=document.getElementById('modeBtn'),pill=document.getElementById('modePill');
-        if(curMode==='numbers'){btn.textContent='Mode: Numbers';btn.classList.add('mode-num');pill.textContent='NUMBERS';pill.className='mode-pill num';}
-        else{btn.textContent='Mode: Letters';btn.classList.remove('mode-num');pill.textContent='LETTERS';pill.className='mode-pill let';}
-        holdCand=null;holdStart=null;
-        updateNodataBanner();
-    }
-
-    /* Build reference grid */
-    (function(){
-        var items=[
-            {l:'A'},{l:'B'},{l:'C'},{l:'D'},{l:'E'},{l:'F'},
-            {l:'G'},{l:'H'},{l:'I'},{l:'J',mot:true},{l:'K'},{l:'L'},
-            {l:'M'},{l:'N'},{l:'O'},{l:'P'},{l:'Q'},{l:'R'},
-            {l:'S'},{l:'T'},{l:'U'},{l:'V'},{l:'W'},{l:'X'},
-            {l:'Y'},{l:'Z',mot:true},
-            {l:'0',num:true},{l:'1',num:true},{l:'2',num:true},{l:'3',num:true},
-            {l:'4',num:true},{l:'5',num:true},{l:'6',num:true},{l:'7',num:true},
-            {l:'8',num:true},{l:'9',num:true}
-        ];
-        var g=document.getElementById('refGrid');
-        items.forEach(function(it){
-            var c=document.createElement('div');
-            c.className='ref-cell'+(it.mot?' mot-cell':'')+(it.num?' num-cell':'');
-            c.id='gc-'+it.l;
-            c.title='Click to see how to sign "'+it.l+'"';
-            c.innerHTML='<div class="ref-letter">'+it.l+'</div>'
-                +'<div class="ref-desc">'+(it.mot?'★ motion':(it.num?'◆ number':'static'))+'</div>'
-                +'<div class="ref-hint">tap for help</div>';
-            c.addEventListener('click', function() { openDexter(it.l); });
-            g.appendChild(c);
-        });
-    })();
-
-    function highlightRef(lbl) {
-        document.querySelectorAll('.ref-cell').forEach(function(c){c.classList.remove('active');});
-        if(lbl){var el=document.getElementById('gc-'+lbl);if(el)el.classList.add('active');}
-    }
 
     /* ══════════════════════════════════════════════════════════════════
        CAMERA & INFERENCE
@@ -1158,7 +1313,7 @@
         document.getElementById('confFill').style.width='0%';
         document.getElementById('confPct').textContent='—';
         document.getElementById('motBadge').style.display='none';
-        updateHold(null,false,false);highlightRef(null);
+        updateHold(null,false,null);highlightRef(null);
         idxTrail=[];pkTrail=[];scrTrail=[];lastClassLM=null;
         initSmoothers();
         setStatus('Camera off');
@@ -1185,7 +1340,7 @@
             document.getElementById('confPct').textContent='—';
             document.getElementById('currentSign').textContent='—';
             mb.style.display='none';
-            updateHold(null,false,false);highlightRef(null);
+            updateHold(null,false,null);highlightRef(null);
             idxTrail=[];pkTrail=[];scrTrail=[];lastClassLM=null;
             initSmoothers();
             tctx.clearRect(0,0,tc.width,tc.height);
@@ -1221,6 +1376,8 @@
             tctx.beginPath();tctx.moveTo(scrTrail[i-1].x,scrTrail[i-1].y);tctx.lineTo(scrTrail[i].x,scrTrail[i].y);tctx.stroke();
         }
         pushTrail(classLM);
+
+        // Motion detection only in letters mode
         if(curMode==='letters'){
             var isJ=detectJ(classLM), isZ=detectZ(classLM);
             if(isJ||isZ){
@@ -1230,34 +1387,47 @@
                 document.getElementById('detectLabel').textContent='ASL: "'+ml+'" (motion)';
                 document.getElementById('confFill').style.width='92%';document.getElementById('confFill').className='conf-fill';
                 document.getElementById('confPct').textContent='motion';document.getElementById('currentSign').textContent=ml;
-                highlightRef(ml);updateHold(ml,true,false);return;
+                highlightRef(ml);updateHold(ml,true,null);return;
             }
         }
         mb.style.display='none';
         var isN=(curMode==='numbers');
+        var isCust=(curMode==='custom');
         var res=classifyKNN(classLM, curMode);
         var dl=document.getElementById('detectLetter');
         if(res.noData){
             dl.textContent='?';dl.className='detect-letter nodata';
-            document.getElementById('detectLabel').textContent='train first → open Training Data';
+            var noDataMsg = isCust && customLabels.length === 0
+                ? 'add custom labels first → Training Data'
+                : 'train first → open Training Data';
+            document.getElementById('detectLabel').textContent=noDataMsg;
             document.getElementById('confFill').style.width='0%';document.getElementById('confFill').className='conf-fill';
             document.getElementById('confPct').textContent='—';document.getElementById('currentSign').textContent='—';
             document.getElementById('topScores').innerHTML='<span style="color:var(--accent2);font-size:10px;">no training samples for this mode</span>';
             document.getElementById('debugInfo').textContent='KNN · mode: '+curMode+' · samples: 0';
-            highlightRef(null);updateHold(null,false,false);
+            highlightRef(null);updateHold(null,false,null);
             return;
         }
         var pct=Math.round(res.confidence*100);
-        dl.textContent=res.label||'?';dl.className='detect-letter'+(isN?' num':'');
-        document.getElementById('detectLabel').textContent=res.label?(isN?'Number: '+res.label:'ASL: "'+res.label+'"'):'uncertain';
-        document.getElementById('confFill').style.width=pct+'%';document.getElementById('confFill').className='conf-fill'+(isN?' num':'');
+        var dlClass = 'detect-letter' + (isN ? ' num' : (isCust ? ' custom' : ''));
+        dl.textContent=res.label||'?';dl.className=dlClass;
+        document.getElementById('detectLabel').textContent=res.label?(isCust?'Custom: "'+res.label+'"':(isN?'Number: '+res.label:'ASL: "'+res.label+'"')):'uncertain';
+        document.getElementById('confFill').style.width=pct+'%';
+        document.getElementById('confFill').className='conf-fill'+(isN?' num':(isCust?' custom':''));
         document.getElementById('confPct').textContent=pct+'%';document.getElementById('currentSign').textContent=res.label||'—';
         document.getElementById('topScores').innerHTML=res.top.map(function(sc,i){
-            return '<span class="sc'+(i===0?(isN?' best-num':' best'):'')+'">'+sc.l+': '+sc.s+'nn ('+sc.p+'%)</span>';
+            var bestCls = i===0 ? (isN?' best-num':(isCust?' best-custom':' best')) : '';
+            return '<span class="sc'+bestCls+'">'+sc.l+': '+sc.s+'nn ('+sc.p+'%)</span>';
         }).join('');
-        document.getElementById('debugInfo').textContent='KNN · mode: '+curMode+' · total samples: '+allSamples.length+' · for mode: '+allSamples.filter(function(s){return(isN?NUMBER_LABELS:LETTER_LABELS).indexOf(s.label)>=0;}).length;
+        var modeCount = isCust ? customLabels.length : (isN ? NUMBER_LABELS.length : LETTER_LABELS.length);
+        var modeSamples = allSamples.filter(function(s){
+            var labels = isCust ? customLabels : (isN ? NUMBER_LABELS : LETTER_LABELS);
+            return labels.indexOf(s.label) >= 0;
+        }).length;
+        document.getElementById('debugInfo').textContent='KNN · mode: '+curMode+' · total samples: '+allSamples.length+' · for mode: '+modeSamples;
         highlightRef(res.label);
-        updateHold(res.confidence>0.40?res.label:null, false, isN);
+        var typeStr = isN ? 'num' : (isCust ? 'custom' : 'let');
+        updateHold(res.confidence>0.40?res.label:null, false, typeStr);
     }
 </script>
 </body>
