@@ -3,63 +3,198 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-    <title>ASL Training Viewer</title>
+    <title>Dexterity Training Viewer</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="src/images/dexterity_logo_transparent.png">
     <style>
-        :root{--bg:#0a0a0f;--surface:#111118;--border:#1e1e2e;--accent:#7cffd4;--accent2:#ff6b6b;--accent3:#ffd166;--accent4:#c084fc;--text:#e8e8f0;--muted:#555570;--card:#13131e;}
+        :root{
+            --bg:#07101f;
+            --surface:#0b1729;
+            --border:#112240;
+            --accent:#00d4ff;
+            --accent2:#ff4d6d;
+            --accent3:#00ffb3;
+            --accent4:#1a8fff;
+            --btn-blue:#1a6bff;
+            --text:#cce7ff;
+            --muted:#3a6080;
+            --card:#0c1a30;
+            --glow-cyan:rgba(0,212,255,.18);
+            --glow-blue:rgba(26,111,255,.22);
+        }
         *{box-sizing:border-box;margin:0;padding:0;}
-        body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:1.5rem;overflow-x:hidden;}
-        body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 20% 10%,rgba(124,255,212,.04) 0%,transparent 60%),radial-gradient(ellipse 50% 30% at 80% 80%,rgba(192,132,252,.04) 0%,transparent 60%);pointer-events:none;z-index:0;}
+        body{
+            font-family:'Syne',sans-serif;
+            background:var(--bg);
+            color:var(--text);
+            min-height:100vh;
+            padding:1.5rem;
+            overflow-x:hidden;
+        }
+        body::before{
+            content:'';
+            position:fixed;
+            inset:0;
+            background:
+                    radial-gradient(ellipse 70% 50% at 15% 5%, rgba(0,212,255,.07) 0%, transparent 55%),
+                    radial-gradient(ellipse 60% 40% at 85% 85%, rgba(26,111,255,.09) 0%, transparent 55%),
+                    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(26,143,255,.04) 0%, transparent 60%);
+            pointer-events:none;
+            z-index:0;
+        }
         .app{position:relative;z-index:1;max-width:1000px;margin:0 auto;}
         header{display:flex;align-items:baseline;gap:1rem;margin-bottom:2rem;flex-wrap:wrap;}
         header h1{font-size:28px;font-weight:800;letter-spacing:-.5px;}
-        header h1 span{color:var(--accent4);}
+        header h1 span{
+            color:var(--accent);
+            text-shadow:0 0 18px rgba(0,212,255,.55), 0 0 40px rgba(0,212,255,.2);
+        }
         .subtitle{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);letter-spacing:.1em;}
-        .btn{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;padding:7px 16px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;transition:all .15s;}
-        .btn:hover{background:var(--border);}
-        .btn.danger{border-color:rgba(255,107,107,.4);color:var(--accent2);}
-        .btn.danger:hover{background:rgba(255,107,107,.1);}
-        .btn.accent{border-color:rgba(124,255,212,.4);color:var(--accent);}
-        .btn.accent:hover{background:rgba(124,255,212,.08);}
+
+        .btn{
+            font-family:'Syne',sans-serif;font-size:13px;font-weight:600;
+            padding:7px 16px;border-radius:6px;
+            border:1px solid var(--border);
+            background:var(--card);
+            color:var(--text);
+            cursor:pointer;transition:all .15s;
+        }
+        .btn:hover{
+            background:rgba(0,212,255,.07);
+            border-color:rgba(0,212,255,.3);
+            box-shadow:0 0 10px rgba(0,212,255,.12);
+        }
+        .btn.danger{border-color:rgba(255,77,109,.35);color:var(--accent2);}
+        .btn.danger:hover{background:rgba(255,77,109,.1);box-shadow:0 0 10px rgba(255,77,109,.15);}
+        .btn.accent{
+            border-color:rgba(0,212,255,.4);
+            color:var(--accent);
+        }
+        .btn.accent:hover{
+            background:rgba(0,212,255,.1);
+            box-shadow:0 0 14px rgba(0,212,255,.2);
+        }
+
         .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:1.5rem;}
-        .search{font-family:'DM Mono',monospace;font-size:13px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:7px 12px;width:120px;}
+        .search{
+            font-family:'DM Mono',monospace;font-size:13px;
+            background:var(--surface);border:1px solid var(--border);
+            color:var(--text);border-radius:6px;padding:7px 12px;width:120px;
+            outline:none;transition:border-color .15s,box-shadow .15s;
+        }
+        .search:focus{border-color:rgba(0,212,255,.4);box-shadow:0 0 10px rgba(0,212,255,.12);}
+
         .summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px;margin-bottom:1.5rem;}
-        .sum-cell{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 6px;text-align:center;cursor:pointer;transition:all .15s;}
-        .sum-cell:hover{border-color:var(--accent4);}
-        .sum-cell.active{background:rgba(192,132,252,.12);border-color:var(--accent4);}
-        .sum-cell.zero{opacity:.4;}
+        .sum-cell{
+            background:var(--card);border:1px solid var(--border);
+            border-radius:8px;padding:8px 6px;text-align:center;
+            cursor:pointer;transition:all .15s;
+        }
+        .sum-cell:hover{
+            border-color:rgba(0,212,255,.4);
+            box-shadow:0 0 10px rgba(0,212,255,.12);
+        }
+        .sum-cell.active{
+            background:rgba(0,212,255,.08);
+            border-color:var(--accent);
+            box-shadow:0 0 16px rgba(0,212,255,.2), inset 0 0 8px rgba(0,212,255,.05);
+        }
+        .sum-cell.zero{opacity:.35;}
         .sum-letter{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;}
         .sum-count{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px;}
-        .sum-cell.active .sum-count{color:var(--accent4);}
-        .section-title{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem;display:flex;justify-content:space-between;align-items:center;}
+        .sum-cell.active .sum-count{color:var(--accent);}
+        .sum-cell.active .sum-letter{color:var(--accent);text-shadow:0 0 10px rgba(0,212,255,.5);}
+
+        .section-title{
+            font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);
+            text-transform:uppercase;letter-spacing:.1em;margin-bottom:.75rem;
+            display:flex;justify-content:space-between;align-items:center;
+        }
         .samples-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
-        .sample-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.75rem;display:flex;flex-direction:column;gap:6px;}
+        .sample-card{
+            background:var(--card);border:1px solid var(--border);
+            border-radius:10px;padding:.75rem;
+            display:flex;flex-direction:column;gap:6px;
+            transition:border-color .15s,box-shadow .15s;
+        }
+        .sample-card:hover{
+            border-color:rgba(0,212,255,.25);
+            box-shadow:0 0 16px rgba(0,212,255,.08);
+        }
         .sample-card canvas{width:100%;height:120px;border-radius:6px;background:#000;display:block;}
         .sample-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
-        .sample-label{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--accent4);}
+        .sample-label{
+            font-family:'Syne',sans-serif;font-size:20px;font-weight:800;
+            color:var(--accent);
+            text-shadow:0 0 12px rgba(0,212,255,.45);
+        }
         .sample-del{font-size:11px;padding:3px 8px;align-self:flex-end;}
+
         .empty{font-family:'DM Mono',monospace;font-size:13px;color:var(--muted);padding:2rem 0;text-align:center;}
-        .export-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:1rem;padding-top:1.2rem;border-top:1px solid var(--border);margin-bottom:1.5rem;}
+
+        .export-row{
+            display:flex;gap:8px;flex-wrap:wrap;margin-top:1rem;
+            padding-top:1.2rem;border-top:1px solid var(--border);margin-bottom:1.5rem;
+        }
         .export-info{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);align-self:center;}
 
         /* ── Lock screen ── */
-        #lockScreen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;}
-        #lockScreen::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 20% 10%,rgba(124,255,212,.04) 0%,transparent 60%),radial-gradient(ellipse 50% 30% at 80% 80%,rgba(192,132,252,.04) 0%,transparent 60%);pointer-events:none;}
-        .lock-card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2.5rem 2rem;width:100%;max-width:360px;display:flex;flex-direction:column;gap:1.25rem;}
+        #lockScreen{
+            position:fixed;inset:0;z-index:9999;
+            background:var(--bg);
+            display:flex;align-items:center;justify-content:center;
+        }
+        #lockScreen::before{
+            content:'';position:fixed;inset:0;
+            background:
+                    radial-gradient(ellipse 70% 50% at 15% 5%, rgba(0,212,255,.07) 0%, transparent 55%),
+                    radial-gradient(ellipse 60% 40% at 85% 85%, rgba(26,111,255,.1) 0%, transparent 55%);
+            pointer-events:none;
+        }
+        .lock-card{
+            position:relative;
+            background:var(--card);
+            border:1px solid var(--border);
+            border-radius:16px;padding:2.5rem 2rem;
+            width:100%;max-width:360px;
+            display:flex;flex-direction:column;gap:1.25rem;
+            box-shadow:0 0 40px rgba(0,212,255,.08), 0 0 80px rgba(26,111,255,.07);
+        }
         .lock-logo{display:flex;align-items:baseline;gap:.5rem;}
         .lock-logo h2{font-size:22px;font-weight:800;letter-spacing:-.5px;}
-        .lock-logo h2 span{color:var(--accent4);}
+        .lock-logo h2 span{
+            color:var(--accent);
+            text-shadow:0 0 14px rgba(0,212,255,.55);
+        }
         .lock-logo .subtitle{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.1em;}
         .lock-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;}
         .lock-input-wrap{position:relative;display:flex;align-items:center;}
-        .lock-input{font-family:'DM Mono',monospace;font-size:14px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 40px 9px 12px;width:100%;outline:none;transition:border-color .15s;letter-spacing:.08em;}
-        .lock-input:focus{border-color:rgba(192,132,252,.5);}
-        .lock-input.error{border-color:rgba(255,107,107,.5);}
+        .lock-input{
+            font-family:'DM Mono',monospace;font-size:14px;
+            background:var(--surface);border:1px solid var(--border);
+            color:var(--text);border-radius:8px;padding:9px 40px 9px 12px;
+            width:100%;outline:none;transition:border-color .15s,box-shadow .15s;letter-spacing:.08em;
+        }
+        .lock-input:focus{
+            border-color:rgba(0,212,255,.45);
+            box-shadow:0 0 12px rgba(0,212,255,.15);
+        }
+        .lock-input.error{border-color:rgba(255,77,109,.5);box-shadow:0 0 10px rgba(255,77,109,.15);}
         .lock-toggle{position:absolute;right:10px;background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;}
         .lock-toggle svg{width:16px;height:16px;fill:none;stroke:var(--muted);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;transition:stroke .15s;}
-        .lock-toggle:hover svg{stroke:var(--text);}
-        .lock-btn{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;padding:10px 16px;border-radius:8px;border:1px solid rgba(192,132,252,.4);background:rgba(192,132,252,.08);color:var(--accent4);cursor:pointer;transition:all .15s;letter-spacing:.02em;}
-        .lock-btn:hover{background:rgba(192,132,252,.16);}
+        .lock-toggle:hover svg{stroke:var(--accent);}
+        .lock-btn{
+            font-family:'Syne',sans-serif;font-size:14px;font-weight:700;
+            padding:10px 16px;border-radius:8px;
+            border:1px solid rgba(0,212,255,.35);
+            background:rgba(26,107,255,.18);
+            color:var(--accent);cursor:pointer;transition:all .15s;letter-spacing:.02em;
+        }
+        .lock-btn:hover{
+            background:rgba(26,107,255,.3);
+            box-shadow:0 0 20px rgba(0,212,255,.2), 0 0 40px rgba(26,111,255,.12);
+            border-color:rgba(0,212,255,.6);
+        }
         .lock-err{font-family:'DM Mono',monospace;font-size:12px;color:var(--accent2);min-height:16px;transition:opacity .2s;}
         .lock-err.hidden{opacity:0;}
     </style>
@@ -70,7 +205,7 @@
 <div id="lockScreen">
     <div class="lock-card">
         <div class="lock-logo">
-            <h2>ASL <span>Training</span></h2>
+            <h2>Dexterity <span>Training</span></h2>
             <span class="subtitle">// protected</span>
         </div>
         <div>
@@ -90,17 +225,16 @@
 <!-- ── Main App ── -->
 <div class="app" id="mainApp" style="display:none;">
     <header>
-        <h1>ASL <span>Training</span> Viewer</h1>
+        <h1>Dexterity <span>Training</span> Viewer</h1>
         <span class="subtitle">// IndexedDB · asl_training</span>
     </header>
-
 
     <div class="toolbar">
         <input class="search" id="filterInput" placeholder="Filter label…" oninput="applyFilter()"/>
         <button class="btn danger" onclick="deleteAll()">Delete all</button>
         <button class="btn accent" onclick="loadAll()">Refresh</button>
         <span id="totalMsg" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);"></span>
-        <span id="autoImportStatus" style="font-family:'DM Mono',monospace;font-size:11px;display:none;padding:3px 8px;border-radius:4px;background:rgba(124,255,212,.07);border:1px solid rgba(124,255,212,.2);"></span>
+        <span id="autoImportStatus" style="font-family:'DM Mono',monospace;font-size:11px;display:none;padding:3px 8px;border-radius:4px;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);"></span>
     </div>
     <div class="export-row">
         <button class="btn" onclick="exportJSON()">Export JSON</button>
@@ -115,7 +249,6 @@
         <button class="btn" style="font-size:11px;padding:3px 10px;" onclick="clearFilter()">Show all</button>
     </div>
     <div class="samples-grid" id="samplesGrid"></div>
-
 </div>
 
 <script>
@@ -155,7 +288,6 @@
         }
     }
 
-    /* Auto-unlock if already authenticated this session */
     if (sessionStorage.getItem(SESSION_KEY) === '1') {
         document.getElementById('lockScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = '';
@@ -265,12 +397,12 @@
             ctx.beginPath();
             ctx.moveTo(px(lm[c[0]]),py(lm[c[0]]));
             ctx.lineTo(px(lm[c[1]]),py(lm[c[1]]));
-            ctx.strokeStyle='rgba(124,255,212,.5)';ctx.lineWidth=1.5;ctx.stroke();
+            ctx.strokeStyle='rgba(0,212,255,.5)';ctx.lineWidth=1.5;ctx.stroke();
         });
         lm.forEach(function(p,i){
             var tip=TIPS.indexOf(i)>=0;
             ctx.beginPath();ctx.arc(px(p),py(p),tip?5:3,0,2*Math.PI);
-            ctx.fillStyle=tip?'rgba(255,209,102,.9)':'rgba(200,210,255,.8)';ctx.fill();
+            ctx.fillStyle=tip?'rgba(26,111,255,.95)':'rgba(0,212,255,.85)';ctx.fill();
         });
     }
 
@@ -361,12 +493,10 @@
             });
     }
 
-    /* Only init DB if already unlocked (page refresh after auth) */
     if (sessionStorage.getItem(SESSION_KEY) === '1') {
         openDB(tryAutoImport);
     }
 
-    /* Focus password input on load */
     window.addEventListener('load', function() {
         var inp = document.getElementById('pwInput');
         if (inp && document.getElementById('lockScreen').style.display !== 'none') {
