@@ -102,6 +102,16 @@
         .btn.speak.speaking{background:rgba(0,212,255,.12);border-color:var(--accent);animation:speakPulse 1s ease-in-out infinite;}
         @keyframes speakPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,.3);}50%{box-shadow:0 0 0 5px rgba(0,212,255,0);}}
 
+        /* ── MIC BUTTON ── */
+        .btn.mic{border-color:rgba(255,107,107,.35);color:var(--accent2);display:flex;align-items:center;gap:5px;}
+        .btn.mic:hover{background:rgba(255,107,107,.08);}
+        .btn.mic.listening{background:rgba(255,107,107,.12);border-color:var(--accent2);animation:micPulse 1s ease-in-out infinite;}
+        @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,.3);}50%{box-shadow:0 0 0 5px rgba(255,107,107,0);}}
+        .mic-status{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:5px;min-height:14px;display:flex;align-items:center;gap:5px;}
+        .mic-status.active{color:var(--accent2);}
+        .mic-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:micDot .7s ease-in-out infinite;}
+        @keyframes micDot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.75);}}
+
         .train-panel{border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:.75rem 1rem;background:rgba(59,130,246,.04);margin-top:.5rem;}
         .train-panel.hidden{display:none;}
         .train-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:.5rem;}
@@ -332,7 +342,11 @@
                     <button class="btn speak" id="speakBtn" onclick="speakSentence()">
                         <span id="speakIcon">🔊</span> Speak
                     </button>
+                    <button class="btn mic" id="micBtn" onclick="toggleMic()">
+                        <span id="micIcon">🎤</span> Dictate
+                    </button>
                 </div>
+                <div class="mic-status" id="micStatus"></div>
             </div>
 
             <div class="card">
@@ -466,6 +480,108 @@
         if (arc) { arc.style.strokeDashoffset = 113; }
         var lbl = document.getElementById('holdLabel');
         if (lbl) { lbl.innerHTML = 'hold<br>sign'; }
+    }
+
+    /* ══════════════════════════════════════════════════════════════════
+       SPEECH-TO-TEXT (Web Speech API)
+    ══════════════════════════════════════════════════════════════════ */
+    var _recognition = null;
+    var _micListening = false;
+    var _interimLen = 0;
+
+    function setMicStatus(msg, active) {
+        var el = document.getElementById('micStatus');
+        if (!msg) { el.innerHTML = ''; el.className = 'mic-status'; return; }
+        el.className = 'mic-status' + (active ? ' active' : '');
+        el.innerHTML = active ? '<span class="mic-dot"></span>' + msg : msg;
+    }
+
+    function toggleMic() {
+        var btn = document.getElementById('micBtn');
+        var icon = document.getElementById('micIcon');
+        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            setMicStatus('⚠ Not supported in this browser', false);
+            return;
+        }
+
+        if (_micListening) {
+            if (_recognition) { _recognition.stop(); _recognition = null; }
+            _micListening = false;
+            btn.classList.remove('listening');
+            icon.textContent = '🎤';
+            setMicStatus('Dictation stopped', false);
+            setTimeout(function() { setMicStatus(''); }, 2000);
+            return;
+        }
+
+        _recognition = new SpeechRecognition();
+        _recognition.continuous = true;
+        _recognition.interimResults = true;
+        _recognition.lang = 'en-US';
+        _interimLen = 0;
+
+        _recognition.onstart = function() {
+            _micListening = true;
+            btn.classList.add('listening');
+            icon.textContent = '⏹';
+            setMicStatus('Listening… speak now', true);
+        };
+
+        _recognition.onresult = function(event) {
+            var interim = '';
+            var finalText = '';
+            for (var i = event.resultIndex; i < event.results.length; i++) {
+                var t = event.results[i][0].transcript;
+                if (event.results[i].isFinal) { finalText += t; }
+                else { interim += t; }
+            }
+
+            if (finalText) {
+                // Remove interim placeholder characters
+                for (var r = 0; r < _interimLen; r++) {
+                    if (cursorPos > 0) { sentence.splice(cursorPos - 1, 1); cursorPos--; }
+                }
+                _interimLen = 0;
+                // Insert final text
+                finalText.split('').forEach(function(ch) {
+                    sentence.splice(cursorPos, 0, {ch: ch, type: 'let'});
+                    cursorPos++;
+                });
+                renderSentence();
+            } else if (interim) {
+                // Replace previous interim
+                for (var r = 0; r < _interimLen; r++) {
+                    if (cursorPos > 0) { sentence.splice(cursorPos - 1, 1); cursorPos--; }
+                }
+                interim.split('').forEach(function(ch) {
+                    sentence.splice(cursorPos, 0, {ch: ch, type: 'let'});
+                    cursorPos++;
+                });
+                _interimLen = interim.length;
+                renderSentence();
+            }
+        };
+
+        _recognition.onerror = function(event) {
+            if (event.error === 'no-speech') return;
+            setMicStatus('⚠ ' + event.error, false);
+            _micListening = false;
+            btn.classList.remove('listening');
+            icon.textContent = '🎤';
+            _recognition = null;
+        };
+
+        _recognition.onend = function() {
+            // Auto-restart if still supposed to be listening (browser cuts off after silence)
+            if (_micListening && _recognition) {
+                try { _recognition.start(); } catch(e) {}
+            }
+        };
+
+        try { _recognition.start(); }
+        catch(e) { setMicStatus('⚠ Could not start microphone', false); }
     }
 
     /* ══════════════════════════════════════════════════════════════════
